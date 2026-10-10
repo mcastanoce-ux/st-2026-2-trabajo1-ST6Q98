@@ -1,0 +1,22 @@
+---
+title: "Trabajo 1 — Tres series: descripción, operador de rezago, dependencia, pronóstico y argumentación"
+subtitle: "Equipo ST6Q98 · Series de tiempo univariadas (3009297) · UNAL Medellín · 2026-II"
+author:
+  - "Mariana Castaño Celis"
+  - "Sarah Catalina Criollo"
+  - "Sofia Cadavid "
+date: "2026-10-16"
+lang: es
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    embed-resources: true
+    code-fold: true
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
