@@ -38,7 +38,7 @@ ciclo_de_fecha <- function(fechas, s) {
   est <- estacion_de_fecha(fechas, s)
   # nuevo ciclo cada vez que la estacion vuelve a empezar
   cumsum(c(TRUE, diff(est) < 0))
-
+}
 ficha_serie <- function(datos, nombre, unidad, frecuencia) {
   if (!all(c("fecha", "valor") %in% names(datos))) {
     stop("ficha_serie(): `datos` debe tener columnas fecha y valor.")
@@ -55,3 +55,5 @@ ficha_serie <- function(datos, nombre, unidad, frecuencia) {
     media = mean(datos$valor)
   )
 }
+
+#Hola
