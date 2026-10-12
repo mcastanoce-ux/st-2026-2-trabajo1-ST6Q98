@@ -46,6 +46,7 @@ regresion_mco <- function(y, X, L = NULL) {
   V_hac <- XtX_inv %*% S %*% XtX_inv
   ee_hac <- sqrt(diag(V_hac))
   list(coeficientes = beta, ee_ordinario = ee_ord, ee_robusto = ee_hac,
+       V_ordinario = XtX_inv * sigma2, V_robusto = V_hac,
        residuos = e, ajustados = ajustados, sigma2 = sigma2, L = L, gl = n - p)
 }
 
@@ -156,7 +157,8 @@ disenar_tendencia <- function(t_idx, tipo) {
 #' Dentro de muestra el pronostico de t usa una regresion ajustada con y[1..t-1] (ventana
 #' creciente), para no usar informacion posterior a t - 1.
 #' La exponencial se estima en logaritmos, ln Y_t = a + theta t + e_t, y se retransforma
-
+#' con el factor smearing de Duan, (1/n) sum exp(e_t), como recomiendan las notas: exp(a + theta t)
+#' sola estima la mediana condicional y no la media.
 
 ajustar_tendencia <- function(y, tipo = c("lineal", "cuadratica", "exponencial")) {
   tipo <- match.arg(tipo)
@@ -251,7 +253,14 @@ ajustar_holt <- function(y, alpha, beta) {
 }
 
 #' Inicializacion de Holt-Winters de las notas (clase 4, diap. 68; clase 5, diap. 57).
-
+#' Con m = floor(n/s) ciclos completos y ybar_1, ..., ybar_m sus promedios:
+#'   b0 = (ybar_m - ybar_1) / ((m - 1) s),   L0 = ybar_1 - b0 (s - 1)/2,
+#'   S0_j = promedio sobre los ciclos de Y_{j+is} - (L0 + b0 (j + is - 1))   (aditivo)
+#'   S0_j = promedio sobre los ciclos de Y_{j+is} / (L0 + b0 (j + is - 1))   (multiplicativo)
+#' y se renormalizan: suma cero (aditivo) o promedio uno (multiplicativo).
+#' El estado (L0, b0) corresponde a t = 0 y S0_j es el indice que usa el periodo t = j,
+#' de modo que el primer pronostico es Yhat_1. Con esta convencion se reproducen las
+#' cifras de la clase 5 (diap. 54): L4 = 6,8650, b4 = 0,0326, S1 = -5,2471, Yhat_5 = 1,6505.
 inicializar_hw <- function(y, s, tipo = c("aditivo", "multiplicativo")) {
   tipo <- match.arg(tipo)
   m <- floor(length(y) / s)

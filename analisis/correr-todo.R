@@ -10,7 +10,7 @@
 #   Seccion 4  Operador de rezago                 (4a, 4b y 4c hechos; 4d va en el informe)
 #   Bloque V6  Verificacion de los metodos de pronostico (seccion 6a)
 #   Seccion 5  Dependencia y estacionariedad
-#   Seccion 6  Pronostico y evaluacion            (6a hecho; 6b a 6e pendientes)
+#   Seccion 6  Pronostico y evaluacion            (6a y 6b hechos; 6c a 6e pendientes)
 #   Cierre     resultados.rds, sessionInfo() y tiempo de ejecucion
 # =============================================================================
 
@@ -272,6 +272,22 @@ verif6 <- local({
             ok(a$parametros$coeficientes, stats::coef(fit), 1e-8) &&
               ok(a$pronosticar(3), pr_lm, 1e-8) && ok(a$yhat[t0], y9, 1e-8))
   }
+  
+  # 9b. regresion_mco() (usada en 6b): coeficientes y error estandar ordinario contra
+  #     summary(lm()) sobre las ventas con ficticias de suma cero; el HAC con L = 0 debe
+  #     coincidir con el error de White, (X'X)^-1 X' diag(e^2) X (X'X)^-1, calculado aparte.
+  X <- disenar_tendencia_estacional(1:16, 4, 1)
+  rm_ <- regresion_mco(ventas, X)
+  q <- factor(rep(1:4, 4))
+  fit <- stats::lm(ventas ~ t + q, data = data.frame(ventas = ventas, t = 1:16, q = q),
+                   contrasts = list(q = "contr.sum"))
+  sm <- summary(fit)$coefficients
+  white <- sqrt(diag(solve(crossprod(X)) %*% crossprod(X * rm_$residuos) %*% solve(crossprod(X))))
+  agregar("regresion_mco() (6b)", "summary(lm()) con contr.sum: coeficientes y e.e. ordinario; HAC con L = 0 = White",
+          paste(sprintf("%.4f", sm[, 2]), collapse = " "),
+          paste(sprintf("%.4f", rm_$ee_ordinario), collapse = " "),
+          ok(rm_$coeficientes, sm[, 1], 1e-10) && ok(rm_$ee_ordinario, sm[, 2], 1e-10) &&
+            ok(regresion_mco(ventas, X, L = 0)$ee_robusto, white, 1e-10))
   
   # 10. Holt-Winters aditivo: ventas, (alpha, beta, gamma) = (0,3; 0,05; 0,3), paso t = 5 (clase 5, diap. 54)
   a <- ajustar_hw(ventas, 4, 0.3, 0.05, 0.3)
@@ -957,6 +973,140 @@ print(as.data.frame(tabla_6a), right = FALSE)
 cat("\nMetodos aplicados por serie:\n")
 print(table(aplicados_6$serie, aplicados_6$rol))
 
+# ---- 6(b) Regresiones: coeficientes, errores estandar y supuestos -----------
+# Cada tendencia ajustada por MCO (con o sin ficticias) se ajusta sobre la serie completa
+# (1, ..., T): no tiene constantes que elegir, y la inferencia sobre la tendencia usa todos
+# los datos. Error estandar ordinario y robusto HAC con nucleo de Bartlett y
+# L = floor(4 (T/100)^(2/9)) rezagos (regresion_mco()). Las pruebas t usan el robusto,
+# referido a una t de Student con T - p g.l. Los residuos se revisan con el correlograma,
+# Ljung-Box referido a chi^2_m (los coeficientes de regresores deterministas no restan
+# grados de libertad), Jarque-Bera y Durbin-Watson, leido con d ~ 2(1 - r1).
+# La exponencial se revisa en escala logaritmica, donde esta su error: ln Y = a + theta t + e.
+
+etiqueta_coef <- function(nombre) {
+  dplyr::case_when(
+    nombre == "intercepto" ~ "beta0 (intercepto)",
+    nombre == "t" ~ "beta1 (t)",
+    nombre == "t2" ~ "beta2 (t^2)",
+    TRUE ~ paste0("gamma", sub("^e", "", nombre), " (estacion ", sub("^e", "", nombre), ")"))
+}
+
+lectura_coef <- function(nombre, tipo, rechaza, b, unidad) {
+  if (nombre == "intercepto") {
+    return(if (rechaza) "El nivel en t = 0 es distinto de cero." else
+      "No se distingue de cero el nivel en t = 0 (sin interes practico).")
+  }
+  if (nombre == "t") {
+    que <- if (tipo == "exponencial") paste0("una tasa de crecimiento de ", formatC(100 * b, digits = 2, format = "f", decimal.mark = ","), " % por periodo")
+    else paste0("un cambio de ", formatC(b, digits = 3, format = "f", decimal.mark = ","), " ", unidad, " por periodo")
+    return(if (rechaza) paste0("Hay tendencia significativa: ", que, ".") else
+      paste0("La pendiente no se distingue de cero con el error robusto: no hay tendencia (estimada: ", que, ")."))
+  }
+  if (nombre == "t2") {
+    return(if (rechaza) "La curvatura es significativa: la tendencia no es una recta." else
+      "La curvatura no se distingue de cero: no hay evidencia contra la recta.")
+  }
+  j <- sub("^e", "", nombre)
+  if (rechaza) paste0("La estacion ", j, " se aparta del nivel de su ano en ", formatC(b, digits = 1, format = "f", decimal.mark = ","), " ", unidad, ".")
+  else paste0("La estacion ", j, " no se distingue del nivel de su ano.")
+}
+
+hacer_6b <- function(serie, metodo, rol, nombre, ...) {
+  cfg <- series_cfg[[serie]]
+  datos <- datos_series[[serie]]
+  y <- datos$valor
+  n <- length(y)
+  aj <- do.call(catalogo_6[[metodo]]$f, c(list(y = y), fijos_6(metodo, serie)))
+  reg <- aj$regresion
+  tipo <- aj$parametros$tipo %||% "ficticias"
+  unidad <- if (tipo == "exponencial") "(log)" else cfg$unidad
+  
+  # Coeficientes; con ficticias se agrega el efecto recuperado gamma_s = -(gamma_1 + ... + gamma_{s-1})
+  b <- reg$coeficientes; ee_o <- reg$ee_ordinario; ee_r <- reg$ee_robusto
+  if (metodo == "tend_ficticias") {
+    s <- fijos_6(metodo, serie)$s
+    w <- as.numeric(grepl("^e", names(b)))
+    b <- c(b, setNames(-sum(b * w), paste0("e", s)))
+    ee_o <- c(ee_o, sqrt(drop(t(w) %*% reg$V_ordinario %*% w)))
+    ee_r <- c(ee_r, sqrt(drop(t(w) %*% reg$V_robusto %*% w)))
+  }
+  gl <- reg$gl
+  t_rob <- b / ee_r
+  critico <- stats::qt(0.975, gl)
+  p_rob <- 2 * stats::pt(abs(t_rob), gl, lower.tail = FALSE)
+  coeficientes <- tibble::tibble(
+    coeficiente = names(b), etiqueta = etiqueta_coef(names(b)), estimacion = unname(b),
+    ee_ordinario = unname(ee_o), ee_robusto = unname(ee_r), razon_ee = unname(ee_r / ee_o),
+    t_robusto = unname(t_rob), critico = critico, p_valor = unname(p_rob))
+  
+  # Pruebas t con el error robusto, con sus seis elementos
+  pruebas_t <- lapply(seq_along(b), function(i) {
+    nm <- names(b)[i]
+    prueba_seis(
+      nombre = paste0("t robusta de ", etiqueta_coef(nm)),
+      h0 = paste0(etiqueta_coef(nm), " = 0"), h1 = paste0(etiqueta_coef(nm), " != 0"),
+      estadistico = "t = b / ee_HAC(b)",
+      distribucion = paste0("t de Student con ", gl, " g.l. (aproximada)"),
+      observado = t_rob[i], critico = c(-critico, critico),
+      region = paste0("|t| > ", formatC(critico, digits = 3, format = "f")),
+      p = p_rob[i],
+      lectura_rechazo = lectura_coef(nm, tipo, TRUE, b[i], unidad),
+      lectura_no_rechazo = lectura_coef(nm, tipo, FALSE, b[i], unidad))
+  })
+  
+  # Supuestos sobre los residuos
+  e <- reg$residuos
+  m_acf <- min(floor(n / 4), 24)
+  r_e <- acf_muestral(e, m_acf)
+  que <- paste0("los residuos de la ", tolower(nombre))
+  lb <- ljung_box(e, m_lb[[serie]], g = 0, que = que)
+  val <- validar_errores(e, m_lb[[serie]])
+  jb <- val$jarque_bera
+  dw <- val$durbin_watson
+  fuera <- which(abs(r_e) > 1.96 / sqrt(n))
+  
+  # Figura: residuos en el tiempo y su correlograma
+  df_e <- data.frame(fecha = datos$fecha, e = e)
+  g_e <- ggplot2::ggplot(df_e, ggplot2::aes(x = fecha, y = e)) +
+    ggplot2::geom_hline(yintercept = 0, colour = "grey50") +
+    ggplot2::geom_line(colour = "grey25", linewidth = 0.4) +
+    ggplot2::labs(title = paste0(cfg$corto, ": residuos de la ", tolower(nombre)),
+                  x = "Fecha", y = paste0("Residuo ", if (tipo == "exponencial") "(escala log)" else paste0("(", cfg$unidad, ")"))) +
+    ggplot2::theme_minimal(base_size = 11)
+  g_r <- correlograma(r_e, n, "ACF de los residuos", "ACF")
+  id_fig <- paste0(serie, "-reg-", sub("tend_", "", metodo))
+  guardar_fig(g_e / g_r, id_fig, ancho = 9, alto = 7)
+  
+  list(serie = serie, metodo = metodo, rol = rol, nombre = nombre, tipo = tipo, n = n,
+       p = length(reg$coeficientes), gl = gl, L = reg$L, sigma2 = reg$sigma2,
+       coeficientes = coeficientes, pruebas_t = pruebas_t,
+       r_residuos = r_e, m_acf = m_acf, fuera_banda = fuera,
+       ljung_box = lb, jarque_bera = jb, durbin_watson = dw, figura = id_fig)
+}
+
+`%||%` <- function(a, b) if (is.null(a)) b else a
+
+regresiones_6b <- aplicados_6 |>
+  dplyr::filter(metodo %in% c("tend_lineal", "tend_cuadratica", "tend_exponencial", "tend_ficticias"))
+res6b <- purrr::pmap(regresiones_6b, hacer_6b)
+names(res6b) <- paste(regresiones_6b$serie, regresiones_6b$metodo, sep = "_")
+
+resumen6b <- dplyr::bind_rows(lapply(res6b, function(z) {
+  tibble::tibble(serie = z$serie, regresion = z$nombre, rol = z$rol, n = z$n, p = z$p, L = z$L,
+                 LB_m = as.numeric(sub(".*m = (\\d+).*", "\\1", z$ljung_box$nombre)),
+                 LB_Q = z$ljung_box$observado, LB_p = z$ljung_box$p_valor,
+                 JB = z$jarque_bera$observado, JB_p = z$jarque_bera$p_valor,
+                 DW = z$durbin_watson[["d"]], r1 = z$durbin_watson[["r1"]],
+                 DW_aprox = z$durbin_watson[["aprox_2_1_menos_r1"]],
+                 rezagos_fuera = compactar(z$fuera_banda))
+}))
+cat("\nRESUMEN 6(b): supuestos sobre los residuos de cada regresion\n")
+print(as.data.frame(resumen6b), digits = 3)
+for (z in res6b) {
+  cat("\n", strrep("=", 70), "\n", z$serie, ": ", z$nombre, "\n", sep = "")
+  print(as.data.frame(z$coeficientes), digits = 4)
+}
+
 
 # =============================================================================
 # CIERRE
@@ -982,7 +1132,7 @@ saveRDS(
        z_elegida = z_elegida,
        res5 = res5, resumen5 = resumen5,
        verif6 = verif6, asignacion_6a = asignacion_6a, tabla_6a = tabla_6a,
-       aplicados_6 = aplicados_6),
+       aplicados_6 = aplicados_6, res6b = res6b, resumen6b = resumen6b),
   file.path("figs", "resultados.rds")
 )
 
