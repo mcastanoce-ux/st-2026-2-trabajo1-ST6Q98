@@ -663,7 +663,6 @@ for (id in names(res5)) {
   print(as.data.frame(res5[[id]]$bloques), digits = 4)
 }
 
-# ---- Y en el saveRDS del cierre, agregar:  res5 = res5, resumen5 = resumen5
 
 # =============================================================================
 # SECCION 6. PRONOSTICO Y EVALUACION                               (pendiente)
@@ -691,7 +690,8 @@ saveRDS(
        tabla_4c = tabla_4c, identidad_4c = identidad_4c,
        sobrediferencia = sobrediferencia, elegida_4c = elegida_4c,
        media_elegida = media_elegida,
-       z_elegida = z_elegida),
+       z_elegida = z_elegida,
+       res5 = res5, resumen5 = resumen5),
   file.path("figs", "resultados.rds")
 )
 
