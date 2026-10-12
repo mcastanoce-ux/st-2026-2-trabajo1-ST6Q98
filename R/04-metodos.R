@@ -1,4 +1,3 @@
-
 validar_y <- function(y, min_n = 2, positiva = FALSE, quien = "metodo") {
   if (!is.numeric(y) || !is.null(dim(y))) stop(quien, "(): `y` debe ser un vector numerico.")
   if (anyNA(y)) stop(quien, "(): `y` no puede tener NA.")
@@ -148,12 +147,16 @@ ajustar_dmm <- function(y, k) {
 
 disenar_tendencia <- function(t_idx, tipo) {
   switch(tipo,
-    lineal = cbind(intercepto = 1, t = t_idx),
-    cuadratica = cbind(intercepto = 1, t = t_idx, t2 = t_idx^2),
-    exponencial = cbind(intercepto = 1, t = t_idx))
+         lineal = cbind(intercepto = 1, t = t_idx),
+         cuadratica = cbind(intercepto = 1, t = t_idx, t2 = t_idx^2),
+         exponencial = cbind(intercepto = 1, t = t_idx))
 }
 
-#Tendencia determinista lineal, cuadratica o exponencial por MCO.
+#' Tendencia determinista lineal, cuadratica o exponencial por MCO (clase 4, diap. 24-28).
+#' Dentro de muestra el pronostico de t usa una regresion ajustada con y[1..t-1] (ventana
+#' creciente), para no usar informacion posterior a t - 1.
+#' La exponencial se estima en logaritmos, ln Y_t = a + theta t + e_t, y se retransforma
+
 
 ajustar_tendencia <- function(y, tipo = c("lineal", "cuadratica", "exponencial")) {
   tipo <- match.arg(tipo)
@@ -166,18 +169,23 @@ ajustar_tendencia <- function(y, tipo = c("lineal", "cuadratica", "exponencial")
     X <- disenar_tendencia(seq_len(t - 1), tipo)
     b <- qr.coef(qr(X), z[1:(t - 1)])
     pred <- sum(disenar_tendencia(t, tipo) * b)
-    yhat[t] <- if (tipo == "exponencial") exp(pred) else pred
+    yhat[t] <- if (tipo == "exponencial") {
+      exp(pred) * mean(exp(z[1:(t - 1)] - as.numeric(X %*% b)))
+    } else pred
   }
   X <- disenar_tendencia(seq_len(n), tipo)
   ajuste <- regresion_mco(z, X)
   b <- ajuste$coeficientes
+  duan <- if (tipo == "exponencial") mean(exp(ajuste$residuos)) else 1
   pronosticar <- function(h) {
     validar_h(h)
     pred <- as.numeric(disenar_tendencia(n + seq_len(h), tipo) %*% b)
-    if (tipo == "exponencial") exp(pred) else pred
+    if (tipo == "exponencial") exp(pred) * duan else pred
   }
   list(yhat = yhat, pronosticar = pronosticar,
-       parametros = list(metodo = paste("tendencia", tipo), tipo = tipo, coeficientes = b))
+       parametros = list(metodo = paste("tendencia", tipo), tipo = tipo, coeficientes = b,
+                         factor_duan = duan),
+       regresion = ajuste)
 }
 
 disenar_tendencia_estacional <- function(t_idx, s, inicio) {
@@ -214,23 +222,25 @@ ajustar_tendencia_estacional <- function(y, s, inicio = 1) {
   }
   list(yhat = yhat, pronosticar = pronosticar,
        parametros = list(metodo = "tendencia con ficticias de suma cero", s = s, inicio = inicio,
-                         coeficientes = b, efectos_estacionales = efectos))
+                         coeficientes = b, efectos_estacionales = efectos),
+       regresion = ajuste)
 }
 
 # ---- Holt y Holt-Winters -------------------------------------------------------
 
-#' Holt (tendencia lineal local).
+#' Holt (tendencia lineal local). Convencion de las notas (clase 4, def. 4; clase 5, def. 2):
+#' L1 = Y1 y T1 = 0, de modo que el primer pronostico es Yhat_2 = L1 + T1 = Y1.
 ajustar_holt <- function(y, alpha, beta) {
   validar_param(alpha, "alpha", "ajustar_holt")
   validar_param(beta, "beta", "ajustar_holt")
-  validar_y(y, 3, quien = "ajustar_holt")
+  validar_y(y, 2, quien = "ajustar_holt")
   n <- length(y)
   L <- Tt <- numeric(n)
-  L[1] <- y[1]; Tt[1] <- y[2] - y[1]
+  L[1] <- y[1]; Tt[1] <- 0
   yhat <- rep(NA_real_, n)
   for (t in 2:n) {
-    if (t >= 3) yhat[t] <- L[t - 1] + Tt[t - 1]
-    L[t] <- alpha * y[t] + (1 - alpha) * (L[t - 1] + Tt[t - 1])
+    yhat[t] <- L[t - 1] + Tt[t - 1]
+    L[t] <- alpha * y[t] + (1 - alpha) * yhat[t]
     Tt[t] <- beta * (L[t] - L[t - 1]) + (1 - beta) * Tt[t - 1]
   }
   L_n <- L[n]; T_n <- Tt[n]
@@ -240,68 +250,93 @@ ajustar_holt <- function(y, alpha, beta) {
                          nivel_final = L_n, pendiente_final = T_n))
 }
 
-#' Holt-Winters aditivo con periodo s.
+#' Inicializacion de Holt-Winters de las notas (clase 4, diap. 68; clase 5, diap. 57).
 
+inicializar_hw <- function(y, s, tipo = c("aditivo", "multiplicativo")) {
+  tipo <- match.arg(tipo)
+  m <- floor(length(y) / s)
+  if (m < 2) stop("inicializar_hw(): hacen falta al menos dos ciclos completos.")
+  ciclos <- matrix(y[seq_len(m * s)], nrow = s)        # columna i = ciclo i
+  ybar <- colMeans(ciclos)
+  b0 <- (ybar[m] - ybar[1]) / ((m - 1) * s)
+  L0 <- ybar[1] - b0 * (s - 1) / 2
+  recta <- matrix(L0 + b0 * (seq_len(m * s) - 1), nrow = s)
+  if (tipo == "aditivo") {
+    S0 <- rowMeans(ciclos - recta)
+    S0 <- S0 - mean(S0)
+  } else {
+    S0 <- rowMeans(ciclos / recta)
+    S0 <- S0 / mean(S0)
+  }
+  list(L0 = L0, b0 = b0, S0 = S0, m = m)
+}
+
+#' Recursion comun de Holt-Winters. S guarda s posiciones previas: S[t + s] es S_t,
+#' y S[1:s] son los indices iniciales S0_1, ..., S0_s.
+recursion_hw <- function(y, s, alpha, beta, gamma, tipo) {
+  n <- length(y)
+  ini <- inicializar_hw(y, s, tipo)
+  L <- b <- yhat <- rep(NA_real_, n)
+  S <- c(ini$S0, rep(NA_real_, n))
+  L_ant <- ini$L0; b_ant <- ini$b0
+  for (t in seq_len(n)) {
+    S_ant <- S[t]                                      # S_{t-s}
+    P <- L_ant + b_ant                                 # nivel proyectado desde t - 1
+    if (tipo == "aditivo") {
+      yhat[t] <- P + S_ant
+      L[t] <- alpha * (y[t] - S_ant) + (1 - alpha) * P
+      b[t] <- beta * (L[t] - L_ant) + (1 - beta) * b_ant
+      S[t + s] <- gamma * (y[t] - L[t]) + (1 - gamma) * S_ant
+    } else {
+      yhat[t] <- P * S_ant
+      L[t] <- alpha * (y[t] / S_ant) + (1 - alpha) * P
+      b[t] <- beta * (L[t] - L_ant) + (1 - beta) * b_ant
+      S[t + s] <- gamma * (y[t] / L[t]) + (1 - gamma) * S_ant
+    }
+    L_ant <- L[t]; b_ant <- b[t]
+  }
+  list(yhat = yhat, L = L, b = b, S = S[-seq_len(s)], ini = ini,
+       L_n = L[n], b_n = b[n], S_fin = S[n + seq_len(s)])
+}
+
+#' Holt-Winters aditivo con periodo s.
 ajustar_hw <- function(y, s, alpha, beta, gamma) {
   validar_param(s, "s", "ajustar_hw", 2, Inf, entero = TRUE)
   validar_param(alpha, "alpha", "ajustar_hw")
   validar_param(beta, "beta", "ajustar_hw")
   validar_param(gamma, "gamma", "ajustar_hw")
-  validar_y(y, 2 * s + 1, quien = "ajustar_hw")
-  n <- length(y)
-  L <- Tt <- S <- rep(NA_real_, n)
-  L[s] <- mean(y[1:s])
-  Tt[s] <- (mean(y[(s + 1):(2 * s)]) - mean(y[1:s])) / s
-  S[1:s] <- y[1:s] - L[s]
-  yhat <- rep(NA_real_, n)
-  for (t in (s + 1):n) {
-    pred <- L[t - 1] + Tt[t - 1] + S[t - s]
-    if (t > 2 * s) yhat[t] <- pred
-    L[t] <- alpha * (y[t] - S[t - s]) + (1 - alpha) * (L[t - 1] + Tt[t - 1])
-    Tt[t] <- beta * (L[t] - L[t - 1]) + (1 - beta) * Tt[t - 1]
-    S[t] <- gamma * (y[t] - L[t]) + (1 - gamma) * S[t - s]
-  }
-  L_n <- L[n]; T_n <- Tt[n]; S_fin <- S[(n - s + 1):n]
+  validar_y(y, 2 * s, quien = "ajustar_hw")
+  r <- recursion_hw(y, s, alpha, beta, gamma, "aditivo")
+  L_n <- r$L_n; T_n <- r$b_n; S_fin <- r$S_fin
   pronosticar <- function(h) {
     validar_h(h)
     k <- seq_len(h)
     L_n + T_n * k + S_fin[k - s * ceiling(k / s) + s]
   }
-  list(yhat = yhat, pronosticar = pronosticar,
+  list(yhat = r$yhat, pronosticar = pronosticar,
        parametros = list(metodo = "Holt-Winters aditivo", s = s, alpha = alpha, beta = beta,
-                         gamma = gamma, nivel_final = L_n, pendiente_final = T_n,
-                         estacionales_finales = S_fin))
+                         gamma = gamma, inicial = r$ini, nivel_final = L_n,
+                         pendiente_final = T_n, estacionales_finales = S_fin),
+       estados = list(L = r$L, b = r$b, S = r$S))
 }
 
 #' Holt-Winters multiplicativo con periodo s.
-
 ajustar_hw_mult <- function(y, s, alpha, beta, gamma) {
   validar_param(s, "s", "ajustar_hw_mult", 2, Inf, entero = TRUE)
   validar_param(alpha, "alpha", "ajustar_hw_mult")
   validar_param(beta, "beta", "ajustar_hw_mult")
   validar_param(gamma, "gamma", "ajustar_hw_mult")
-  validar_y(y, 2 * s + 1, positiva = TRUE, quien = "ajustar_hw_mult")
-  n <- length(y)
-  L <- Tt <- S <- rep(NA_real_, n)
-  L[s] <- mean(y[1:s])
-  Tt[s] <- (mean(y[(s + 1):(2 * s)]) - mean(y[1:s])) / s
-  S[1:s] <- y[1:s] / L[s]
-  yhat <- rep(NA_real_, n)
-  for (t in (s + 1):n) {
-    pred <- (L[t - 1] + Tt[t - 1]) * S[t - s]
-    if (t > 2 * s) yhat[t] <- pred
-    L[t] <- alpha * (y[t] / S[t - s]) + (1 - alpha) * (L[t - 1] + Tt[t - 1])
-    Tt[t] <- beta * (L[t] - L[t - 1]) + (1 - beta) * Tt[t - 1]
-    S[t] <- gamma * (y[t] / L[t]) + (1 - gamma) * S[t - s]
-  }
-  L_n <- L[n]; T_n <- Tt[n]; S_fin <- S[(n - s + 1):n]
+  validar_y(y, 2 * s, positiva = TRUE, quien = "ajustar_hw_mult")
+  r <- recursion_hw(y, s, alpha, beta, gamma, "multiplicativo")
+  L_n <- r$L_n; T_n <- r$b_n; S_fin <- r$S_fin
   pronosticar <- function(h) {
     validar_h(h)
     k <- seq_len(h)
     (L_n + T_n * k) * S_fin[k - s * ceiling(k / s) + s]
   }
-  list(yhat = yhat, pronosticar = pronosticar,
+  list(yhat = r$yhat, pronosticar = pronosticar,
        parametros = list(metodo = "Holt-Winters multiplicativo", s = s, alpha = alpha, beta = beta,
-                         gamma = gamma, nivel_final = L_n, pendiente_final = T_n,
-                         estacionales_finales = S_fin))
+                         gamma = gamma, inicial = r$ini, nivel_final = L_n,
+                         pendiente_final = T_n, estacionales_finales = S_fin),
+       estados = list(L = r$L, b = r$b, S = r$S))
 }
