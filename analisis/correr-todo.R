@@ -8,8 +8,9 @@
 #   Seccion 2  Series y pregunta de pronostico   (2a y 2c hechos; 2b va en el informe)
 #   Seccion 3  Descripcion y patron               (3a, 3b y 3c hechos)
 #   Seccion 4  Operador de rezago                 (4a, 4b y 4c hechos; 4d va en el informe)
-#   Seccion 5  Dependencia y estacionariedad      (pendiente)
-#   Seccion 6  Pronostico y evaluacion            (pendiente)
+#   Bloque V6  Verificacion de los metodos de pronostico (seccion 6a)
+#   Seccion 5  Dependencia y estacionariedad
+#   Seccion 6  Pronostico y evaluacion            (6a hecho; 6b a 6e pendientes)
 #   Cierre     resultados.rds, sessionInfo() y tiempo de ejecucion
 # =============================================================================
 
@@ -155,6 +156,172 @@ stopifnot(
   verif_polinomio$residuo_s12 < 1e-8
 )
 message("Verificacion superada: polinomio_rezago().")
+
+# =============================================================================
+# BLOQUE V6. VERIFICACION DE LOS METODOS DE PRONOSTICO (seccion 6a)
+# Cada ajustar_*() se contrasta contra una cifra de las notas (clases 3, 4, 5 y 9)
+# o contra un calculo a mano. lm() solo aparece aqui, como verificacion.
+# =============================================================================
+
+verif6 <- local({
+  ok <- function(x, objetivo, tol) isTRUE(max(abs(x - objetivo)) < tol)
+  err <- function(ajuste, y, desde = 1) {           # errores a un paso dentro de muestra
+    e <- (y - ajuste$yhat)[desde:length(y)]
+    e[!is.na(e)]
+  }
+  mse <- function(e) mean(e^2); mad <- function(e) mean(abs(e))
+  
+  # Datos de las notas
+  x_ej1    <- c(4, 7, 6, 9, 12, 10)                                     # clase 9, ejemplo 1
+  precio   <- c(18.43, 19.98, 19.51, 20.63, 19.78, 21.25, 21.18, 22.14)  # clase 3, diap. 45 y 37
+  creditos <- c(133, 155, 165, 171, 194, 231, 274, 312, 313, 333, 343)  # clase 4, diap. 66
+  ventas   <- c(1.5, 4.3, 8.9, 12.5, 1.8, 4.5, 9.0, 12.1,               # clase 4, diap. 34
+                1.2, 4.6, 8.1, 12.9, 1.9, 5.1, 8.6, 13.2)
+  
+  filas <- list()
+  agregar <- function(metodo, contra, cifra, obtenido, pasa) {
+    filas[[length(filas) + 1]] <<- tibble::tibble(
+      metodo = metodo, contra = contra, cifra_notas = cifra,
+      obtenido = obtenido, verificado = pasa)
+  }
+  
+  # 1. Ingenuo: su yhat es la fila B x_t del ejemplo 1 de la clase 9
+  a <- ajustar_ingenuo(x_ej1)
+  agregar("ingenuo", "Clase 9, ejemplo 1: fila B x_t", "NA 4 7 6 9 12",
+          paste(a$yhat, collapse = " "), identical(a$yhat, c(NA, 4, 7, 6, 9, 12)))
+  
+  # 2. Ingenuo estacional (s = 2): su yhat es la fila B^2 x_t del mismo ejemplo
+  a <- ajustar_ingenuo_estacional(x_ej1, s = 2)
+  agregar("ingenuo estacional", "Clase 9, ejemplo 1: fila B^2 x_t (s = 2)", "NA NA 4 7 6 9",
+          paste(a$yhat, collapse = " "), identical(a$yhat, c(NA, NA, 4, 7, 6, 9)))
+  
+  # 3. Media simple: media recursiva calculada a mano, 4, (4+7)/2, (4+7+6)/3, ...
+  a <- ajustar_media(x_ej1)
+  a_mano <- c(NA, 4, 11 / 2, 17 / 3, 26 / 4, 38 / 5)
+  agregar("media simple", "A mano sobre el ejemplo 1: 4; 5,5; 5,667; 6,5; 7,6", "media de y1..y(t-1)",
+          paste(round(a$yhat, 3), collapse = " "),
+          ok(a$yhat[-1], a_mano[-1], 1e-12) && a$pronosticar(1) == mean(x_ej1))
+  
+  # 4. Media movil MM(3): precio de la accion (clase 3, diap. 45)
+  a <- ajustar_mm(precio, 3); e <- err(a, precio)
+  agregar("media movil", "Clase 3, diap. 45: MM(3), MSE, MAD, MAPE y pronostico de enero",
+          "N = 5; 1,1621; 0,9780; 4,607 %; 21,5230",
+          sprintf("N = %d; %.4f; %.4f; %.3f %%; %.4f", length(e), mse(e), mad(e),
+                  100 * mean(abs(e / precio[4:8])), a$pronosticar(1)),
+          length(e) == 5 && ok(c(mse(e), mad(e), 100 * mean(abs(e / precio[4:8])), a$pronosticar(1)),
+                               c(1.1621, 0.9780, 4.607, 21.5230), 5e-4))
+  
+  # 5. SES(0,15): misma serie (clase 3, diap. 37), con L1 = Y1, de modo que Yhat_2 = Y1
+  a <- ajustar_ses(precio, 0.15); e <- err(a, precio); e4 <- err(a, precio, 4)
+  agregar("SES", "Clase 3, diap. 37: SES(0,15), N = 7 y MSE en origen comun t = 4..8",
+          "N = 7; 2,8534; 1,5895; 7,609 %; comun 3,3706",
+          sprintf("N = %d; %.4f; %.4f; %.3f %%; comun %.4f", length(e), mse(e), mad(e),
+                  100 * mean(abs(e / precio[2:8])), mse(e4)),
+          length(e) == 7 && ok(c(mse(e), mad(e), 100 * mean(abs(e / precio[2:8])), mse(e4)),
+                               c(2.8534, 1.5895, 7.609, 3.3706), 5e-4))
+  
+  # 6. Doble media movil DMM(3): creditos al consumo (clase 4, diap. 66)
+  a <- ajustar_dmm(creditos, 3); e <- err(a, creditos)
+  agregar("doble media movil", "Clase 4, diap. 66: DMM(3), N, MSE, MAD y 3 pronosticos",
+          "N = 6; 841,24; 28,20; 356,56 370,00 383,44",
+          sprintf("N = %d; %.2f; %.2f; %s", length(e), mse(e), mad(e),
+                  paste(sprintf("%.2f", a$pronosticar(3)), collapse = " ")),
+          length(e) == 6 && ok(c(mse(e), mad(e)), c(841.24, 28.20), 5e-3) &&
+            ok(a$pronosticar(3), c(356.56, 370.00, 383.44), 5e-3))
+  
+  # 7. Holt(0,3; 0,4): creditos al consumo, tabla completa (clase 4, diap. 66)
+  a <- ajustar_holt(creditos, 0.3, 0.4); e <- err(a, creditos)
+  yhat_notas <- c(NA, 133.000, 142.240, 154.439, 166.766, 185.563, 215.273,
+                  256.017, 302.656, 336.845, 366.315)
+  agregar("Holt", "Clase 4, diap. 66: Holt(0,3; 0,4), columna Yhat, MSE, MAD y 3 pronosticos",
+          "N = 10; 1133,08; 28,62; 387,15 414,97 442,80",
+          sprintf("N = %d; %.2f; %.2f; %s", length(e), mse(e), mad(e),
+                  paste(sprintf("%.2f", a$pronosticar(3)), collapse = " ")),
+          length(e) == 10 && ok(a$yhat[-1], yhat_notas[-1], 5e-4) &&
+            ok(c(mse(e), mad(e)), c(1133.08, 28.62), 5e-3) &&
+            ok(a$pronosticar(3), c(387.15, 414.97, 442.80), 5e-3))
+  
+  # 8. Tendencia con ficticias de suma cero: ventas trimestrales (clase 4, diap. 53 y 55)
+  a <- ajustar_tendencia_estacional(ventas, s = 4, inicio = 1)
+  cf <- c(a$parametros$coeficientes[c("intercepto", "t")], a$parametros$efectos_estacionales)
+  agregar("tendencia con ficticias", "Clase 4, diap. 53 y 55: coeficientes y Yhat_17..20",
+          "6,6644 0,0262 | -5,2481 -2,2494 1,7494 5,7481 | 1,863 4,887 8,912 12,938",
+          paste(sprintf("%.4f", cf), collapse = " "),
+          ok(cf, c(6.6644, 0.0262, -5.2481, -2.2494, 1.7494, 5.7481), 5e-4) &&
+            ok(a$pronosticar(4), c(1.863, 4.887, 8.912, 12.938), 5e-4))
+  
+  # 9. Tendencias lineal, cuadratica y exponencial: contra lm() y contra Duan a mano,
+  #    sobre los creditos; el yhat de t se compara con lm() ajustado en y[1..t-1].
+  tt <- seq_along(creditos)
+  for (tipo in c("lineal", "cuadratica", "exponencial")) {
+    a <- ajustar_tendencia(creditos, tipo)
+    form <- switch(tipo, lineal = y ~ t, cuadratica = y ~ t + I(t^2), exponencial = log(y) ~ t)
+    d <- data.frame(y = creditos, t = tt)
+    fit <- stats::lm(form, data = d)
+    nuevo <- data.frame(t = 12:14)
+    duan <- if (tipo == "exponencial") mean(exp(stats::residuals(fit))) else 1
+    pr_lm <- as.numeric(stats::predict(fit, nuevo))
+    pr_lm <- if (tipo == "exponencial") exp(pr_lm) * duan else pr_lm
+    t0 <- 9                                                 # un yhat dentro de muestra
+    fit9 <- stats::lm(form, data = d[1:(t0 - 1), ])
+    y9 <- as.numeric(stats::predict(fit9, data.frame(t = t0)))
+    if (tipo == "exponencial") y9 <- exp(y9) * mean(exp(stats::residuals(fit9)))
+    agregar(paste("tendencia", tipo), "lm() de R: coeficientes, pronosticos 12..14 y yhat_9 con y1..y8",
+            paste(sprintf("%.4f", stats::coef(fit)), collapse = " "),
+            paste(sprintf("%.4f", a$parametros$coeficientes), collapse = " "),
+            ok(a$parametros$coeficientes, stats::coef(fit), 1e-8) &&
+              ok(a$pronosticar(3), pr_lm, 1e-8) && ok(a$yhat[t0], y9, 1e-8))
+  }
+  
+  # 10. Holt-Winters aditivo: ventas, (alpha, beta, gamma) = (0,3; 0,05; 0,3), paso t = 5 (clase 5, diap. 54)
+  a <- ajustar_hw(ventas, 4, 0.3, 0.05, 0.3)
+  hw_obt <- c(a$estados$L[4], a$estados$b[4], a$estados$S[1], a$yhat[5],
+              a$estados$L[5], a$estados$b[5], a$estados$S[5])
+  agregar("Holt-Winters aditivo", "Clase 5, diap. 54: L4, b4, S1, Yhat5, L5, b5, S5",
+          "6,8650 0,0326 -5,2471 1,6505 6,9425 0,0348 -5,2157",
+          paste(sprintf("%.4f", hw_obt), collapse = " "),
+          ok(hw_obt, c(6.8650, 0.0326, -5.2471, 1.6505, 6.9425, 0.0348, -5.2157), 5e-5) &&
+            abs(sum(a$parametros$inicial$S0)) < 1e-12)
+  
+  # 11. Holt-Winters multiplicativo: no hay cifra en las notas; calculo a mano sobre las ventas.
+  #     Promedios anuales 6,80; 6,85; 6,70; 7,20 -> b0 = 0,4/12, L0 = 6,80 - 1,5 b0 = 6,75.
+  #     S0_j = promedio de Y / (L0 + b0 (t - 1)), dividido por su media para que promedie uno.
+  #     Paso t = 1: Yhat1 = (L0 + b0) S0_1, L1 = a Y1/S0_1 + (1 - a)(L0 + b0), etc.
+  a <- ajustar_hw_mult(ventas, 4, 0.3, 0.05, 0.3)
+  b0 <- (7.2 - 6.8) / 12; L0 <- 6.8 - 1.5 * b0
+  recta <- L0 + b0 * (0:15)
+  S0 <- c(mean(ventas[c(1, 5, 9, 13)] / recta[c(1, 5, 9, 13)]),
+          mean(ventas[c(2, 6, 10, 14)] / recta[c(2, 6, 10, 14)]),
+          mean(ventas[c(3, 7, 11, 15)] / recta[c(3, 7, 11, 15)]),
+          mean(ventas[c(4, 8, 12, 16)] / recta[c(4, 8, 12, 16)]))
+  S0 <- S0 / mean(S0)
+  P1 <- L0 + b0
+  yhat1 <- P1 * S0[1]
+  L1 <- 0.3 * 1.5 / S0[1] + 0.7 * P1
+  b1 <- 0.05 * (L1 - L0) + 0.95 * b0
+  S1 <- 0.3 * 1.5 / L1 + 0.7 * S0[1]
+  yhat2 <- (L1 + b1) * S0[2]
+  mano <- c(L0, b0, S0[1], yhat1, L1, b1, S1, yhat2)
+  obt <- c(a$parametros$inicial$L0, a$parametros$inicial$b0, a$parametros$inicial$S0[1],
+           a$yhat[1], a$estados$L[1], a$estados$b[1], a$estados$S[1], a$yhat[2])
+  agregar("Holt-Winters multiplicativo", "A mano sobre las ventas: L0, b0, S0_1, Yhat1, L1, b1, S1, Yhat2",
+          paste(sprintf("%.4f", mano), collapse = " "),
+          paste(sprintf("%.4f", obt), collapse = " "),
+          ok(obt, mano, 1e-12) && abs(mean(a$parametros$inicial$S0) - 1) < 1e-12)
+  
+  # 12. Con alpha = beta = gamma = 0, Holt-Winters aditivo pronostica la recta inicial mas
+  #     el perfil inicial (clase 5, proposicion 8): Yhat_t = L0 + b0 t + S0_j.
+  a <- ajustar_hw(ventas, 4, 0, 0, 0)
+  ini <- a$parametros$inicial
+  agregar("Holt-Winters aditivo", "Clase 5, prop. 8: con alpha = beta = gamma = 0, Yhat_t = L0 + b0 t + S0_j",
+          "diferencia 0", sprintf("%.1e", max(abs(a$yhat - (ini$L0 + ini$b0 * 1:16 + rep(ini$S0, 4))))),
+          ok(a$yhat, ini$L0 + ini$b0 * 1:16 + rep(ini$S0, 4), 1e-12))
+  
+  dplyr::bind_rows(filas)
+})
+print(as.data.frame(verif6), right = FALSE)
+stopifnot("Algun metodo no reproduce la cifra de verificacion" = all(verif6$verificado))
+message("Verificaciones superadas: los ", nrow(verif6), " contrastes de la seccion 6.")
 
 
 # =============================================================================
@@ -665,8 +832,130 @@ for (id in names(res5)) {
 
 
 # =============================================================================
-# SECCION 6. PRONOSTICO Y EVALUACION                               (pendiente)
+# SECCION 6. PRONOSTICO Y EVALUACION
 # =============================================================================
+
+# ---- 6(a) Catalogo de metodos y asignacion a cada serie ---------------------
+# Los metodos se aplican a la serie ORIGINAL (en sus unidades), porque cada uno trae su
+# propio supuesto sobre nivel, tendencia y estacionalidad; la transformacion de la
+# seccion 4 se usa como diagnostico para decidir cuales supuestos son sostenibles.
+# La verificacion de cada ajustar_*() esta en el bloque V6.
+
+# Catalogo: funcion, rejilla de rejillas() (NULL si no tiene constantes) y argumentos fijos.
+catalogo_6 <- list(
+  media           = list(nombre = "Media simple",               f = ajustar_media,     rejilla = NULL),
+  ingenuo         = list(nombre = "Ingenuo",                    f = ajustar_ingenuo,   rejilla = NULL),
+  ingenuo_est     = list(nombre = "Ingenuo estacional",         f = ajustar_ingenuo_estacional, rejilla = NULL),
+  mm              = list(nombre = "Media movil",                f = ajustar_mm,        rejilla = "mm"),
+  ses             = list(nombre = "Suavizamiento exponencial simple", f = ajustar_ses, rejilla = "ses"),
+  dmm             = list(nombre = "Doble media movil",          f = ajustar_dmm,       rejilla = "dmm"),
+  tend_lineal     = list(nombre = "Tendencia lineal",           f = ajustar_tendencia, rejilla = NULL,
+                         fijos = list(tipo = "lineal")),
+  tend_cuadratica = list(nombre = "Tendencia cuadratica",       f = ajustar_tendencia, rejilla = NULL,
+                         fijos = list(tipo = "cuadratica")),
+  tend_exponencial = list(nombre = "Tendencia exponencial",     f = ajustar_tendencia, rejilla = NULL,
+                          fijos = list(tipo = "exponencial")),
+  tend_ficticias  = list(nombre = "Tendencia con ficticias de suma cero", f = ajustar_tendencia_estacional,
+                         rejilla = NULL),
+  holt            = list(nombre = "Holt",                       f = ajustar_holt,      rejilla = "holt"),
+  hw              = list(nombre = "Holt-Winters aditivo",       f = ajustar_hw,        rejilla = "hw"),
+  hw_mult         = list(nombre = "Holt-Winters multiplicativo", f = ajustar_hw_mult,  rejilla = "hw_mult")
+)
+
+# Metodos que usan el periodo s; a cada serie se le pasa su s_candidato (7, 4, 12).
+# inicio = 1 en las tres series: la serie 1 empieza un lunes (estacion 1 con %u),
+# la 2 en el primer trimestre y la 3 en enero.
+usa_s <- c("ingenuo_est", "tend_ficticias", "hw", "hw_mult")
+
+# DECISION DEL EQUIPO: asignacion de metodos (edite aqui si cambia el diagnostico).
+#   rol = "sostenido"  el diagnostico de las secciones 3 a 5 sostiene su supuesto
+#         "referente"  ingenuo con que se compara todo (6c)
+#         "contraste"  el diagnostico contradice su supuesto; se aplica para mostrarlo
+#         "no aplica"  no se aplica a esa serie
+asignacion_6a <- tibble::tribble(
+  ~serie,   ~metodo,            ~rol,         ~evidencia,
+  # ---- Serie 1: tipo I, nivel estable, r1 = 0,48, sin estacionalidad relevante -----------
+  "serie1", "media",            "sostenido",  "Tipo I (3c): nivel estable sin tendencia; no se diferencia (4c: Var(nabla Y)/Var(Y) = 1,03 = 2(1 - r1)). La media simple estima ese nivel fijo.",
+  "serie1", "ingenuo",          "referente",  "Sin estacionalidad (3b: r7 = 0,09 dentro de +/-0,146), luego el referente es el ingenuo (s = 1), no el estacional.",
+  "serie1", "ingenuo_est",      "contraste",  "Supone que se repite el dia de la semana; 3b no le atribuye estacionalidad semanal (efecto pequeno, r7 dentro de la banda).",
+  "serie1", "mm",               "sostenido",  "Estacionaria en media con dependencia de corto plazo (r1 = 0,48, ACF que cae rapido): un nivel local promediado sobre k dias.",
+  "serie1", "ses",              "sostenido",  "Mismo supuesto de nivel local; con r1 = 0,48 el pronostico optimo vuelve a la media sin olvidar del todo el ultimo dato.",
+  "serie1", "dmm",              "contraste",  "Supone tendencia lineal local; la pendiente ajustada es 0,015 s/dia (2,7 s en 180 dias frente a s = 18 s).",
+  "serie1", "tend_lineal",      "contraste",  "Supone tendencia global; la pendiente de 0,015 s/dia es despreciable y diferenciar sube la varianza (4c).",
+  "serie1", "tend_cuadratica",  "no aplica",  "Sin tendencia, menos aun curva; la recta ya es el contraste de tendencia global.",
+  "serie1", "tend_exponencial", "no aplica",  "Sin crecimiento porcentual: el nivel no crece.",
+  "serie1", "tend_ficticias",   "no aplica",  "Supone tendencia y estacionalidad; 3b no atribuye estacionalidad y no hay tendencia.",
+  "serie1", "holt",             "contraste",  "Supone pendiente local; el diagnostico dice nivel estable (tipo I). Si beta optima es grande, rastrea ruido.",
+  "serie1", "hw",               "contraste",  "Supone estacionalidad s = 7; la F rechaza pero el efecto es pequeno y r7 queda en la banda: muestra si esa diferencia sirve para pronosticar.",
+  "serie1", "hw_mult",          "no aplica",  "Sin estacionalidad ni amplitud que crezca con el nivel.",
+  # ---- Serie 2: tipo IV, tendencia lineal (15,5 miles/trim.) + estacionalidad aditiva s = 4 --
+  "serie2", "media",            "contraste",  "Supone nivel constante; la media anual crece de 1996 a 2025 y la ACF decae lentamente (r24 = 0,41).",
+  "serie2", "ingenuo",          "contraste",  "Repite el ultimo trimestre; ignora la estacionalidad s = 4 (F rechaza con p < 0,001).",
+  "serie2", "ingenuo_est",      "referente",  "Estacional con s = 4 (3b, r4 = 0,90 > r2 = 0,87): el referente natural es el ingenuo estacional, que repite el mismo trimestre del ano anterior.",
+  "serie2", "mm",               "no aplica",  "Supone nivel constante; ya cubierto por el contraste de la media simple.",
+  "serie2", "ses",              "no aplica",  "Supone nivel sin tendencia ni estacionalidad.",
+  "serie2", "dmm",              "no aplica",  "Supone tendencia sin estacionalidad; el contraste de tendencia sin estacion lo hacen la recta y Holt.",
+  "serie2", "tend_lineal",      "contraste",  "Capta la tendencia lineal pero no la estacionalidad: sus residuos deben conservar el patron de s = 4.",
+  "serie2", "tend_cuadratica",  "no aplica",  "La tendencia es lineal: (1-B^4) deja media 60,4 = 4 x 15,5 y (1-B)(1-B^4) deja media 0,56, a 0,09 e.e. de cero.",
+  "serie2", "tend_exponencial", "no aplica",  "Sin crecimiento porcentual: la amplitud no crece con el nivel y se eligio la version aditiva.",
+  "serie2", "tend_ficticias",   "sostenido",  "Tipo IV: tendencia lineal mas estacionalidad aditiva de periodo 4 (3b y 3c); (1-B)(1-B^4) es justamente el operador que anula ese modelo.",
+  "serie2", "holt",             "contraste",  "Rastrea nivel y pendiente pero no tiene estado estacional; el diagnostico exige s = 4.",
+  "serie2", "hw",               "sostenido",  "Tendencia y estacionalidad aditiva s = 4 (3b): la amplitud casi no cambia mientras el nivel sube. Version local del modelo con ficticias.",
+  "serie2", "hw_mult",          "contraste",  "Supone amplitud proporcional al nivel; 3b eligio aditiva porque la amplitud no crece con el nivel.",
+  # ---- Serie 3: tipo III, tendencia curva con crecimiento de 1,24 % mensual, sin estacionalidad --
+  "serie3", "media",            "no aplica",  "Supone nivel constante con una serie que pasa de 83 a 485 miles; el contraste de nivel lo hace el SES.",
+  "serie3", "ingenuo",          "referente",  "Sin estacionalidad (F no rechaza; r12 = 0,72 entre r11 = 0,74 y r13 = 0,70): el referente es el ingenuo, pronostico optimo del paseo aleatorio que sugiere nabla log Y.",
+  "serie3", "ingenuo_est",      "contraste",  "Supone que se repite el mes del ano anterior; 3b no encuentra estacionalidad anual y la tendencia lo deja un ano atrasado.",
+  "serie3", "mm",               "no aplica",  "Supone nivel constante; el contraste de nivel lo hace el SES.",
+  "serie3", "ses",              "contraste",  "Supone nivel sin tendencia; la ACF de la serie decae lentamente (r1 = 0,96) y el log crece 1,24 % por mes.",
+  "serie3", "dmm",              "sostenido",  "Tendencia local (3c) que puede cambiar de pendiente: la serie se acelera.",
+  "serie3", "tend_lineal",      "contraste",  "Supone recta; la tendencia es curva y crece a tasa constante, no en cantidad constante.",
+  "serie3", "tend_cuadratica",  "sostenido",  "Tendencia curva (3a: el crecimiento se acelera).",
+  "serie3", "tend_exponencial", "sostenido",  "Crecimiento porcentual constante: media de nabla log Y = 0,0124, casi igual a la pendiente del log (0,0121); r1 = -0,42 de nabla log Y es compatible con tendencia determinista en log.",
+  "serie3", "tend_ficticias",   "no aplica",  "Sin estacionalidad (3b).",
+  "serie3", "holt",             "sostenido",  "Tendencia local; nivel y pendiente se rastrean y la pendiente puede crecer con el nivel.",
+  "serie3", "hw",               "no aplica",  "Sin estacionalidad; el contraste estacional lo hace la version multiplicativa, que es la que corresponde a una variabilidad que crece con el nivel.",
+  "serie3", "hw_mult",          "contraste",  "Supone estacionalidad s = 12 multiplicativa; la F no rechaza y el rango de los indices es pequeno: la amplitud crece por el crecimiento porcentual, no por una estacion."
+)
+
+# Comprobaciones de la asignacion: cada metodo del catalogo se aplica a alguna serie,
+# cada serie tiene exactamente un referente, al menos un sostenido y al menos un contraste.
+stopifnot(
+  setequal(unique(asignacion_6a$metodo), names(catalogo_6)),
+  all(table(asignacion_6a$serie) == length(catalogo_6)),
+  all(names(catalogo_6) %in% asignacion_6a$metodo[asignacion_6a$rol != "no aplica"]),
+  all(tapply(asignacion_6a$rol == "referente", asignacion_6a$serie, sum) == 1),
+  all(tapply(asignacion_6a$rol == "sostenido", asignacion_6a$serie, sum) >= 1),
+  all(tapply(asignacion_6a$rol == "contraste", asignacion_6a$serie, sum) >= 1),
+  all(asignacion_6a$metodo[asignacion_6a$rol == "referente"] %in% c("ingenuo", "ingenuo_est"))
+)
+
+# Argumentos fijos de cada metodo en cada serie (s e inicio cuando corresponde)
+fijos_6 <- function(metodo, id) {
+  f <- catalogo_6[[metodo]]$fijos
+  if (is.null(f)) f <- list()
+  if (metodo %in% usa_s) f$s <- series_cfg[[id]]$s_candidato
+  if (metodo == "tend_ficticias") f$inicio <- 1
+  f
+}
+
+# Tabla larga de lo que se aplica: es la entrada de 6(b), 6(c) y 6(d)
+aplicados_6 <- asignacion_6a |>
+  dplyr::filter(rol != "no aplica") |>
+  dplyr::mutate(nombre = vapply(metodo, function(m) catalogo_6[[m]]$nombre, character(1)),
+                rejilla = vapply(metodo, function(m) {
+                  r <- catalogo_6[[m]]$rejilla; if (is.null(r)) NA_character_ else r
+                }, character(1)))
+
+# Tabla de 6(a): metodo por serie, con el rol en cada una
+tabla_6a <- asignacion_6a |>
+  dplyr::mutate(nombre = vapply(metodo, function(m) catalogo_6[[m]]$nombre, character(1))) |>
+  dplyr::select(nombre, metodo, serie, rol) |>
+  tidyr::pivot_wider(names_from = serie, values_from = rol)
+cat("\nTABLA 6(a): asignacion de metodos (rol en cada serie)\n")
+print(as.data.frame(tabla_6a), right = FALSE)
+cat("\nMetodos aplicados por serie:\n")
+print(table(aplicados_6$serie, aplicados_6$rol))
 
 
 # =============================================================================
@@ -691,7 +980,9 @@ saveRDS(
        sobrediferencia = sobrediferencia, elegida_4c = elegida_4c,
        media_elegida = media_elegida,
        z_elegida = z_elegida,
-       res5 = res5, resumen5 = resumen5),
+       res5 = res5, resumen5 = resumen5,
+       verif6 = verif6, asignacion_6a = asignacion_6a, tabla_6a = tabla_6a,
+       aplicados_6 = aplicados_6),
   file.path("figs", "resultados.rds")
 )
 
