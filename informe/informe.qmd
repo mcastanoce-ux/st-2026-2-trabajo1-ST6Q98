@@ -47,7 +47,7 @@ res <- readRDS("figs/resultados.rds")
 for (archivo in sort(list.files("R", pattern = "\\.R$", full.names = TRUE))) {
   source(archivo, encoding = "UTF-8")
 }
-faltan <- setdiff(c("res3a", "res3b"), names(res))
+faltan <- setdiff(c("res3a", "res3b", "verif6", "asignacion_6a", "tabla_6a"), names(res))
 if (length(faltan) > 0) {
   stop("figs/resultados.rds no tiene: ", paste(faltan, collapse = ", "),
        ". El analisis se corrio con una version vieja de analisis/correr-todo.R. ",
@@ -974,7 +974,109 @@ b5c("serie3")
 
 # Pronóstico y evaluación
 
-*Pendiente.*
+## Métodos y asignación
+
+```{r}
+#| label: ayudas-6a
+#| include: false
+rol_txt <- c(sostenido = "Sí, sostenido", referente = "Sí, referente",
+             contraste = "Sí, contraste", `no aplica` = "No")
+tabla_6a_serie <- function(id) {
+  res$asignacion_6a |>
+    dplyr::filter(serie == id) |>
+    dplyr::left_join(dplyr::select(res$tabla_6a, nombre, metodo), by = "metodo") |>
+    dplyr::arrange(factor(rol, levels = c("referente", "sostenido", "contraste", "no aplica"))) |>
+    dplyr::transmute(`Método` = nombre, `¿Se aplica?` = rol_txt[rol], `Evidencia` = evidencia) |>
+    knitr::kable()
+}
+```
+
+Cada método del catálogo está en su propia función de `R/04-metodos.R`. Todas reciben solo $y_1,\dots,y_o$ y devuelven el pronóstico a un paso dentro de muestra (`yhat`, que en $t$ usa solo $y_1,\dots,y_{t-1}$) y una función `pronosticar(h)`. Los métodos se aplican a la **serie original**, en sus unidades, porque cada uno trae su propio supuesto sobre nivel, tendencia y estacionalidad. La transformación de la sección 4 no se pronostica: sirve de diagnóstico para decidir qué supuestos sostienen los datos. En los métodos no se usan `HoltWinters()`, `filter()`, `decompose()` ni `lm()`; las regresiones se resuelven por mínimos cuadrados con `qr()`.
+
+### Convenciones de inicialización
+
+Son las de las notas de clase. La tabla de verificación de abajo muestra que con ellas se reproducen las cifras publicadas.
+
+| Método | Pronóstico a un paso | Inicialización (notas) | Primer pronóstico |
+|---|---|---|---|
+| Media simple | $\hat Y_{t+1}=\frac1t\sum_{i\le t}Y_i$ (media recursiva, sin fuga de información) | — | $t=2$ |
+| Ingenuo | $\hat Y_{t+1}=Y_t$ | — | $t=2$ |
+| Ingenuo estacional | $\hat Y_{t+1}=Y_{t+1-s}$ | — | $t=s+1$ |
+| Media móvil | $\hat Y_{t+1}=MM_t(k)$ | $MM_t(k)$ existe desde $t=k$ | $t=k+1$ |
+| SES | $\hat Y_{t+1}=\alpha Y_t+(1-\alpha)\hat Y_t$ | $\hat Y_2=Y_1$ | $t=2$ |
+| Doble media móvil | $\hat Y_{t+1}=\hat E_t+\hat\beta_1(t)$, con $\hat E_t=2MM_t-DMM_t$ y $\hat\beta_1(t)=\frac{2}{k-1}(MM_t-DMM_t)$ | $DMM_t$ existe desde $t=2k-1$ | $t=2k$ |
+| Tendencias (lineal, cuadrática, exponencial) | recta, parábola o $e^{\hat a+\hat\theta t}$ ajustada con $y_1,\dots,y_{t-1}$ | ventana creciente; la exponencial se retransforma con el factor de Duan $\frac1n\sum e^{\hat\varepsilon_t}$ | $t=p+2$ ($p$ coeficientes) |
+| Tendencia con ficticias de suma cero | $\hat\beta_0+\hat\beta_1t+\hat\gamma_j$, $\sum_j\hat\gamma_j=0$ | ventana creciente; estación 1 = lunes, primer trimestre o enero | $t=s+3$ |
+| Holt | $\hat Y_{t+1}=L_t+\hat T_t$ | $L_1=Y_1$, $\hat T_1=0$ | $t=2$ |
+| Holt–Winters aditivo y multiplicativo | $L_{t-1}+b_{t-1}+S_{t-s}$, o $(L_{t-1}+b_{t-1})S_{t-s}$ | con $m=\lfloor n/s\rfloor$ ciclos y sus promedios $\bar y_i$: $b_0=\frac{\bar y_m-\bar y_1}{(m-1)s}$, $L_0=\bar y_1-b_0\frac{s-1}{2}$, $S_{0,j}$ = promedio de $Y_t-(L_0+b_0(t-1))$ (o del cociente) en la estación $j$, renormalizados a suma cero (o promedio uno) | $t=1$ |
+
+Dos decisiones merecen nota. La tendencia exponencial usa el factor de Duan porque $e^{\hat a+\hat\theta t}$ estima la mediana condicional y no la media (clase 4, proposición 4). En Holt–Winters el estado $(L_0,b_0)$ corresponde a $t=0$ y $S_{0,j}$ es el índice que usa el período $t=j$; con esa lectura se reproduce el paso $t=5$ de la clase 5.
+
+### Verificación de cada método
+
+El bloque V6 de `correr-todo.R` contrasta cada función contra una cifra de las notas o contra un cálculo a mano, y detiene la ejecución con `stopifnot()` si alguna no coincide. `lm()` solo aparece allí, como verificación.
+
+```{r}
+#| label: tbl-verif-6a
+#| tbl-cap: "Verificación de los métodos de pronóstico contra las notas de clase o contra cálculos a mano."
+res$verif6 |>
+  dplyr::transmute(`Método` = metodo, `Contra qué` = contra, `Cifra de referencia` = cifra_notas,
+                   `Obtenido` = gsub(".", ",", obtenido, fixed = TRUE),
+                   `¿Coincide?` = ifelse(verificado, "Sí", "No")) |>
+  knitr::kable()
+```
+
+Las series de juguete son las de las notas: el ejemplo 1 de la clase 9 ($x_t=4,7,6,9,12,10$), los ocho precios de una acción de la clase 3, los once créditos al consumo y las dieciséis ventas trimestrales de las clases 4 y 5. En la media simple la cuenta a mano es $\hat Y_3=(4+7)/2=5{,}5$, $\hat Y_4=17/3=5{,}667$, $\hat Y_5=26/4=6{,}5$ y $\hat Y_6=38/5=7{,}6$. El Holt–Winters multiplicativo no tiene cifra en las notas, así que se calcula a mano sobre las ventas. Los promedios anuales son 6,80, 6,85, 6,70 y 7,20, de donde $b_0=0{,}4/12=0{,}0333$ y $L_0=6{,}80-1{,}5\,b_0=6{,}75$. Con $S_{0,1}=0{,}2346$ queda $\hat Y_1=(L_0+b_0)S_{0,1}=1{,}5914$ y $L_1=0{,}3\cdot 1{,}5/S_{0,1}+0{,}7(L_0+b_0)=6{,}6665$.
+
+### Asignación de métodos a cada serie
+
+Cada serie recibe todos los métodos cuyo supuesto sostiene el diagnóstico de las secciones 3 a 5, un referente ingenuo y al menos un contraste, es decir, un método cuyo supuesto ese diagnóstico contradice. Los trece métodos del catálogo se aplican al menos a una serie.
+
+```{r}
+#| label: tbl-asignacion-6a
+#| tbl-cap: "Asignación de métodos: rol de cada método en cada serie."
+res$tabla_6a |>
+  dplyr::transmute(`Método` = nombre,
+                   `Serie 1: espera` = rol_txt[serie1],
+                   `Serie 2: aeropuerto` = rol_txt[serie2],
+                   `Serie 3: plataforma` = rol_txt[serie3]) |>
+  knitr::kable()
+```
+
+::: {.panel-tabset}
+
+### Serie 1: espera en estación
+
+```{r}
+#| label: tbl-6a-s1
+#| tbl-cap: "Serie 1: métodos aplicados y evidencia."
+tabla_6a_serie("serie1")
+```
+
+**Referente: el ingenuo.** La serie no tiene estacionalidad semanal relevante, así que repetir el mismo día de la semana anterior no es el competidor natural; repetir el último día sí lo es. El diagnóstico anticipa que los métodos de nivel le ganan: con $r_1=0{,}48$ el pronóstico óptimo de un proceso estacionario vuelve a la media, mientras que el ingenuo arrastra todo el ruido del último dato.
+
+### Serie 2: pasajeros del aeropuerto
+
+```{r}
+#| label: tbl-6a-s2
+#| tbl-cap: "Serie 2: métodos aplicados y evidencia."
+tabla_6a_serie("serie2")
+```
+
+**Referente: el ingenuo estacional, con $s=4$.** Es el que proponen las notas para los tipos II y IV, y es el competidor más barato que ya respeta la estacionalidad. El ingenuo simple queda como contraste: compararlo con el estacional muestra cuánto vale reconocer el ciclo anual.
+
+### Serie 3: viajes de la plataforma
+
+```{r}
+#| label: tbl-6a-s3
+#| tbl-cap: "Serie 3: métodos aplicados y evidencia."
+tabla_6a_serie("serie3")
+```
+
+**Referente: el ingenuo.** La serie no tiene estacionalidad y la transformación elegida, $(1-B)$ sobre $\log Y_t$, es la de un paseo aleatorio, cuyo pronóstico óptimo es el último dato (clase 10). El ingenuo estacional repetiría el valor de hace un año y quedaría atrasado un 16 % por la tendencia, así que va como contraste.
+
+:::
+
 
 # Conclusión técnica
 
