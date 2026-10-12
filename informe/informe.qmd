@@ -47,7 +47,7 @@ res <- readRDS("figs/resultados.rds")
 for (archivo in sort(list.files("R", pattern = "\\.R$", full.names = TRUE))) {
   source(archivo, encoding = "UTF-8")
 }
-faltan <- setdiff(c("res3a", "res3b", "verif6", "asignacion_6a", "tabla_6a"), names(res))
+faltan <- setdiff(c("res3a", "res3b", "verif6", "asignacion_6a", "tabla_6a", "res6b", "resumen6b"), names(res))
 if (length(faltan) > 0) {
   stop("figs/resultados.rds no tiene: ", paste(faltan, collapse = ", "),
        ". El analisis se corrio con una version vieja de analisis/correr-todo.R. ",
@@ -1077,6 +1077,164 @@ tabla_6a_serie("serie3")
 
 :::
 
+
+## Regresiones
+
+```{r}
+#| label: ayudas-6b
+#| include: false
+reg <- function(id, metodo) res$res6b[[paste(id, metodo, sep = "_")]]
+
+tabla_coef_6b <- function(z) {
+  z$coeficientes |>
+    dplyr::transmute(Coeficiente = etiqueta, `Estimación` = estimacion,
+                     `e.e. ordinario` = ee_ordinario, `e.e. HAC` = ee_robusto,
+                     `HAC / ordinario` = razon_ee, `t robusta` = t_robusto,
+                     `Valor p` = format.pval(p_valor, digits = 3, eps = 1e-4)) |>
+    knitr::kable(digits = 4, format.args = list(decimal.mark = ","))
+}
+
+tabla_t_6b <- function(z) {
+  dplyr::bind_rows(lapply(z$pruebas_t, function(x) data.frame(
+    `1. Hipótesis` = paste0("H0: ", x$hipotesis[["H0"]], "; H1: ", x$hipotesis[["H1"]]),
+    `2. Estadístico y distribución` = paste0(x$estadistico, " ~ ", x$distribucion),
+    `3. Región de rechazo` = x$region_rechazo,
+    `4. Observado y valor p` = paste0("t = ", formatC(x$observado, digits = 3, format = "f"),
+                                      "; p = ", format.pval(x$p_valor, digits = 3, eps = 1e-4)),
+    `5. Decisión` = x$decision, `6. Lectura` = x$lectura, check.names = FALSE))) |>
+    knitr::kable()
+}
+
+bloque_6b <- function(id, metodo) {
+  z <- reg(id, metodo)
+  cat("#### ", z$nombre, " (", z$rol, ")\n\n", sep = "")
+  cat("Ajuste por mínimos cuadrados sobre las ", z$n, " observaciones, ", z$p,
+      " coeficientes; HAC con núcleo de Bartlett y $L=", z$L, "$ rezagos.",
+      if (z$tipo == "exponencial") " Los coeficientes y los residuos están en la escala de $\\ln Y_t$." else "",
+      "\n\n", sep = "")
+  cat(knitr::kable(z$coeficientes |>
+    dplyr::transmute(Coeficiente = etiqueta, `Estimación` = estimacion,
+                     `e.e. ordinario` = ee_ordinario, `e.e. HAC` = ee_robusto,
+                     `HAC / ordinario` = razon_ee, `t robusta` = t_robusto,
+                     `Valor p` = format.pval(p_valor, digits = 3, eps = 1e-4)),
+    format = "pipe", digits = 4, format.args = list(decimal.mark = ",")), sep = "\n")
+  cat("\n\n**Pruebas t con el error estándar robusto.**\n\n")
+  cat(knitr::kable(dplyr::bind_rows(lapply(z$pruebas_t, function(x) data.frame(
+    `1. Hipótesis` = paste0("H0: ", x$hipotesis[["H0"]], "; H1: ", x$hipotesis[["H1"]]),
+    `2. Estadístico y distribución` = paste0(x$estadistico, " ~ ", x$distribucion),
+    `3. Región de rechazo` = x$region_rechazo,
+    `4. Observado y valor p` = paste0("t = ", formatC(x$observado, digits = 3, format = "f"),
+                                      "; p = ", format.pval(x$p_valor, digits = 3, eps = 1e-4)),
+    `5. Decisión` = x$decision, `6. Lectura` = x$lectura, check.names = FALSE))),
+    format = "pipe"), sep = "\n")
+  cat("\n\n![Residuos en el tiempo y su correlograma, ", tolower(z$nombre), ".](../figs/", z$figura,
+      ".png)\n\n", sep = "")
+  cat("Rezagos de la ACF de los residuos fuera de la banda $\\pm 1{,}96/\\sqrt{n}$: ",
+      compactar(z$fuera_banda), ".\n\n", sep = "")
+  cat("**Ljung–Box sobre los residuos.**\n\n")
+  cat(knitr::kable(prueba_a_tabla(z$ljung_box), format = "pipe"), sep = "\n")
+  cat("\n\n**Jarque–Bera sobre los residuos.**\n\n")
+  cat(knitr::kable(prueba_a_tabla(z$jarque_bera), format = "pipe"), sep = "\n")
+  dw <- z$durbin_watson
+  cat("\n\n**Durbin–Watson (diagnóstico).** $d=", fmt(dw[["d"]], 3), "$, con $r_1=", fmt(dw[["r1"]], 3),
+      "$ y $2(1-r_1)=", fmt(dw[["aprox_2_1_menos_r1"]], 3), "$.\n\n", sep = "")
+}
+
+compactar <- function(x) {
+  if (length(x) == 0) return("ninguno")
+  grupos <- split(x, cumsum(c(1, diff(x) != 1)))
+  paste(vapply(grupos, function(g) if (length(g) == 1) as.character(g) else
+    paste0(min(g), "-", max(g)), character(1)), collapse = ", ")
+}
+
+r6b <- function(id, metodo, que, d = 3) {
+  z <- reg(id, metodo)
+  switch(que,
+         LB = fmt(z$ljung_box$observado, 1), LBp = sub(".", ",", format.pval(z$ljung_box$p_valor, digits = 2, eps = 1e-4), fixed = TRUE),
+         LBc = fmt(z$ljung_box$critico, 2),
+         JB = fmt(z$jarque_bera$observado, 2), JBp = sub(".", ",", format.pval(z$jarque_bera$p_valor, digits = 2, eps = 1e-4), fixed = TRUE),
+         DW = fmt(z$durbin_watson[["d"]], 2), r1 = fmt(z$durbin_watson[["r1"]], 2))
+}
+cf6b <- function(id, metodo, nombre, col = "estimacion", d = 3) {
+  z <- reg(id, metodo)
+  fmt(z$coeficientes[[col]][z$coeficientes$coeficiente == nombre], d)
+}
+```
+
+Las seis tendencias de la asignación se ajustan por mínimos cuadrados sobre la serie completa, $t=1,\dots,T$. No tienen constantes que elegir, y la inferencia sobre la tendencia usa todos los datos; en la evaluación de origen móvil (6c) cada regresión se reajusta en cada origen solo con $y_1,\dots,y_o$.
+
+Para cada coeficiente se reportan dos errores estándar. El ordinario, $\sqrt{\hat\sigma^2[(X'X)^{-1}]_{jj}}$, supone residuos incorrelacionados. El robusto HAC usa el núcleo de Bartlett,
+
+$$
+\widehat{V}_{HAC}=(X'X)^{-1}\Big[\hat\Gamma_0+\sum_{k=1}^{L}\Big(1-\tfrac{k}{L+1}\Big)(\hat\Gamma_k+\hat\Gamma_k')\Big](X'X)^{-1},\qquad \hat\Gamma_k=\sum_{t=k+1}^{n}\hat e_t\hat e_{t-k}\,x_tx_{t-k}',
+$$
+
+con $L=\lfloor 4(n/100)^{2/9}\rfloor$, que da $L=4$ en las tres series. Las pruebas t usan el robusto y se refieren a una t de Student con $n-p$ grados de libertad, que es una aproximación porque el HAC solo es válido asintóticamente. En la regresión con ficticias se estiman $\gamma_1,\dots,\gamma_{s-1}$ y el último efecto se recupera como $\gamma_s=-\sum_{j<s}\gamma_j$, con varianza $\mathbf 1'\widehat V\mathbf 1$ (clase 4, diap. 53).
+
+Sobre los residuos se revisan cuatro cosas: el correlograma, con $m=\min\{\lfloor n/4\rfloor,24\}$ rezagos; Ljung–Box con el $m$ de la sección 5, referido a $\chi^2_m$ porque los coeficientes de regresores deterministas no restan grados de libertad; Jarque–Bera; y Durbin–Watson como diagnóstico, leído con $d\approx 2(1-r_1)$. `regresion_mco()` se verificó contra `summary(lm())` en el bloque V6.
+
+```{r}
+#| label: tbl-resumen-6b
+#| tbl-cap: "Resumen de los supuestos sobre los residuos de cada regresión."
+res$resumen6b |>
+  dplyr::transmute(Serie = serie, `Regresión` = regresion, Rol = rol, m = LB_m,
+                   `Q de Ljung–Box` = LB_Q, `p (LB)` = format.pval(LB_p, digits = 2, eps = 1e-4),
+                   JB = JB, `p (JB)` = format.pval(JB_p, digits = 2, eps = 1e-4),
+                   DW = DW, r1 = r1, `2(1 - r1)` = DW_aprox) |>
+  knitr::kable(digits = 3, format.args = list(decimal.mark = ","))
+```
+
+::: {.panel-tabset}
+
+### Serie 1: espera en estación
+
+```{r}
+#| output: asis
+bloque_6b("serie1", "tend_lineal")
+```
+
+**Lectura.** La recta es el contraste de la serie 1 y la regresión confirma por qué: la pendiente, $`r cf6b("serie1", "tend_lineal", "t")`$ s por día, no se distingue de cero con el error robusto ($t=`r cf6b("serie1", "tend_lineal", "t", "t_robusto", 2)`$). El error HAC es `r cf6b("serie1", "tend_lineal", "t", "razon_ee", 2)` veces el ordinario porque los residuos tienen autocorrelación positiva: con $r_1=`r r6b("serie1", "tend_lineal", "r1")`$, cada día aporta menos información independiente de la que supone el error ordinario. Los residuos no son ruido blanco (Ljung–Box $Q=`r r6b("serie1", "tend_lineal", "LB")`$, $p`r if (res$res6b$serie1_tend_lineal$ljung_box$p_valor < 1e-4) "<0{,}0001" else paste0("=", r6b("serie1", "tend_lineal", "LBp"))`$) y $d=`r r6b("serie1", "tend_lineal", "DW")`$, lejos de 2, dice lo mismo. Esa es la dependencia de corto plazo que encontró la sección 5, y es la estructura que una tendencia determinista no aprovecha y que sí aprovechan la media móvil y el SES. La normalidad no se rechaza ($JB=`r r6b("serie1", "tend_lineal", "JB")`$).
+
+### Serie 2: pasajeros del aeropuerto
+
+```{r}
+#| output: asis
+bloque_6b("serie2", "tend_ficticias")
+```
+
+**Lectura de la tendencia con ficticias.** La pendiente es de `r cf6b("serie2", "tend_ficticias", "t", d = 2)` miles de pasajeros por trimestre, la misma que se encontró en 4(c), y los cuatro efectos estacionales son significativos con el error robusto: el trimestre 3 está `r cf6b("serie2", "tend_ficticias", "e3", d = 1)` miles por encima del nivel de su año y el 1, `r sub("-", "", cf6b("serie2", "tend_ficticias", "e1", d = 1))` por debajo. Los residuos conservan autocorrelación positiva de corto plazo: $r_1=`r r6b("serie2", "tend_ficticias", "r1")`$, $d=`r r6b("serie2", "tend_ficticias", "DW")`$ y Ljung–Box rechaza ($Q=`r r6b("serie2", "tend_ficticias", "LB")`$ con $m=8$). El nivel se aparta de la recta durante varios trimestres seguidos, de modo que la tendencia global es demasiado rígida; eso es lo que Holt–Winters puede capturar al dejar que el nivel se mueva. Por la misma razón el error HAC de la pendiente es `r cf6b("serie2", "tend_ficticias", "t", "razon_ee", 2)` veces el ordinario. Los residuos son compatibles con la normalidad ($JB=`r r6b("serie2", "tend_ficticias", "JB")`$).
+
+```{r}
+#| output: asis
+bloque_6b("serie2", "tend_lineal")
+```
+
+**Lectura de la recta sin ficticias (contraste).** La pendiente estimada casi no cambia (`r cf6b("serie2", "tend_lineal", "t", d = 2)`), pero los residuos guardan todo el patrón estacional: la ACF queda fuera de la banda en los rezagos pares (2, 4, 6, …), alternando signo, y Ljung–Box da $Q=`r r6b("serie2", "tend_lineal", "LB")`$. El caso muestra por qué Durbin–Watson es solo un diagnóstico: $d=`r r6b("serie2", "tend_lineal", "DW")`$ parece cercano a 2 porque solo mira el rezago 1, mientras la estructura está en los rezagos 2 y 4. Aquí el error HAC es menor que el ordinario: la autocorrelación de los residuos alterna de signo y sus términos negativos reducen la varianza de largo plazo.
+
+### Serie 3: viajes de la plataforma
+
+```{r}
+#| output: asis
+bloque_6b("serie3", "tend_exponencial")
+```
+
+**Lectura de la tendencia exponencial.** La pendiente del logaritmo es `r cf6b("serie3", "tend_exponencial", "t", d = 4)`, un crecimiento de `r fmt(100 * (exp(res$res6b$serie3_tend_exponencial$coeficientes$estimacion[2]) - 1), 2)` % mensual, y es la misma que se halló en 4(c). Es la regresión de la serie 3 con mejores residuos: Ljung–Box no rechaza con $m=24$ ($p=`r r6b("serie3", "tend_exponencial", "LBp")`$), $d=`r r6b("serie3", "tend_exponencial", "DW")`$ está cerca de 2 y Jarque–Bera no rechaza ($p=`r r6b("serie3", "tend_exponencial", "JBp")`$). Eso apoya la lectura de 4(c): el $r_1=-0{,}42$ de $\nabla\log Y_t$ era compatible con una tendencia determinista en logaritmos más ruido, no con un paseo aleatorio. Los rezagos sueltos fuera de la banda (7, 11 y 12) son los esperables por azar entre 24.
+
+```{r}
+#| output: asis
+bloque_6b("serie3", "tend_cuadratica")
+```
+
+**Lectura de la tendencia cuadrática.** La curvatura es significativa ($t=`r cf6b("serie3", "tend_cuadratica", "t2", "t_robusto", 1)`$), así que la serie no crece en línea recta. Los residuos conservan una autocorrelación débil ($r_1=`r r6b("serie3", "tend_cuadratica", "r1")`$, apenas fuera de la banda; Ljung–Box rechaza al 5 % con $p=`r r6b("serie3", "tend_cuadratica", "LBp")`$, aunque no al 1 %) y no son normales: $JB=`r r6b("serie3", "tend_cuadratica", "JB")`$. La parábola trata la variabilidad como constante y los cambios grandes del final de la serie, cuando el nivel es alto, producen colas pesadas. La exponencial no tiene ese problema porque en logaritmos la variabilidad es estable.
+
+```{r}
+#| output: asis
+bloque_6b("serie3", "tend_lineal")
+```
+
+**Lectura de la recta (contraste).** La pendiente es significativa, pero la recta no describe la serie: los residuos forman una U, primero positivos, luego negativos y otra vez positivos, y las 24 autocorrelaciones quedan fuera de la banda ($r_1=`r r6b("serie3", "tend_lineal", "r1")`$, $d=`r r6b("serie3", "tend_lineal", "DW")`$). Es la firma de una tendencia curva ajustada con una recta. El error HAC de la pendiente es `r cf6b("serie3", "tend_lineal", "t", "razon_ee", 2)` veces el ordinario: con residuos así, el error ordinario subestima mucho la incertidumbre.
+
+:::
 
 # Conclusión técnica
 
