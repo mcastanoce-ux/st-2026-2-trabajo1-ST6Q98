@@ -635,6 +635,7 @@ res$sobrediferencia |>
 | 2 | $(1-B)(1-B^4)$ | $1-B-B^4+B^5$ | sí; $r_1=-0{,}057$, media 0,56 |
 | 3 | $\log$ y $(1-B)$ | $1-B$ | con la cautela de $r_1=-0{,}42$ |
 
+
 ## Las funciones de pronóstico de Holt y Holt–Winters como soluciones de ecuaciones en diferencias
 
 **Convención.** Desde el origen $T$, los pronósticos son una función del horizonte $h=1,2,\dots$: $f(h)=\hat Y_{T+h}$. Los números $L_T$, $\hat T_T$ y $S_{T-s+1},\dots,S_T$ ya están calculados en $T$ y no dependen de $h$. Aquí el operador de rezago actúa sobre $h$, no sobre el tiempo: $Bf(h)=f(h-1)$. Esa expresión solo es un pronóstico si $h-1\ge 1$, porque $f(0)=\hat Y_T$ no lo es. De ahí salen los rangos de $h$ que pide el enunciado.
@@ -643,25 +644,7 @@ res$sobrediferencia |>
 
 ### Holt
 
-**Afirmación.** $f(h)=L_T+\hat T_T\,h$ satisface $(1-B)^2f(h)=0$ para $h\ge 3$.
-
-**Prueba.** Sean $a=L_T$ y $b=\hat T_T$, de modo que $f(h)=a+bh$.
-
-1. Para $h\ge 2$ (así $h-1\ge 1$ y $f(h-1)$ es un pronóstico):
-
-   $$(1-B)f(h)=f(h)-f(h-1)=(a+bh)-\big(a+b(h-1)\big)=b,$$
-
-   una constante que no depende de $h$.
-
-2. Sea $g(h)=(1-B)f(h)=b$ para $h\ge 2$. Para aplicar $(1-B)$ otra vez se necesitan $g(h)$ y $g(h-1)$, y ambos requieren índice $\ge 2$, es decir, $h\ge 3$:
-
-   $$(1-B)^2f(h)=g(h)-g(h-1)=b-b=0.$$
-
-Equivalentemente,
-
-$$f(h)-2f(h-1)+f(h-2)=a(1-2+1)+b\big(h-2(h-1)+(h-2)\big)=0 .$$
-
-Se pide $h\ge 3$ porque el término $f(h-2)$ es un pronóstico solo si $h-2\ge 1$. $\blacksquare$
+![Demostración a mano: $f(h)=L_T+\hat T_T\,h$ satisface $(1-B)^2f(h)=0$ para $h\ge 3$.](../figs/1.jpeg){#fig-holt-mano fig-alt="Demostración manuscrita: con a igual a L_T y b igual a T_T, f(h) = a + bh; la primera diferencia es la constante b y la segunda diferencia es b menos b, igual a cero, para h mayor o igual a 3." width="90%" fig-align="center"}
 
 **Solución general.** El polinomio característico es $c(z)=(1-z)^2$, con la raíz $z=1$ de multiplicidad $m=2$, así que $R=z^{-1}=1$. Con la fórmula de las clases 7 y 8, $Z_h=\sum_i\sum_{j=0}^{m_i-1}b_{ij}\,h^jR_i^h$, queda
 
@@ -673,31 +656,9 @@ Toda solución es una recta. Holt elige la recta con $b_0=L_T$ y $b_1=\hat T_T$.
 
 ### Holt–Winters aditivo
 
-**Afirmación.** $f(h)=L_T+\hat T_T\,h+\psi(h)$, con $\psi(h)=S_{T+h-s\lceil h/s\rceil}$, satisface $(1-B)(1-B^s)f(h)=0$ para $h\ge s+2$.
+![Demostración a mano, hoja 1: la componente estacional es periódica de período $s$ y $(1-B^s)\psi(h)=0$ para $h\ge s+1$.](../figs/2.jpeg){#fig-hw-mano-1 fig-alt="Primera hoja de la demostración manuscrita de Holt-Winters aditivo: afirmación, componente estacional periódica de período s y primer paso de la prueba." width="90%" fig-align="center"}
 
-**Prueba.** Sean $a=L_T$ y $b=\hat T_T$.
-
-1. **El componente estacional es periódico de período $s$.** Para $h\ge 1$, $\lceil (h+s)/s\rceil=\lceil h/s\rceil+1$, luego
-
-   $$(h+s)-s\left\lceil \tfrac{h+s}{s}\right\rceil=h+s-s\left\lceil \tfrac hs\right\rceil-s=h-s\left\lceil \tfrac hs\right\rceil,$$
-
-   es decir, $\psi(h+s)=\psi(h)$. Para $h=1,\dots,s$ se tiene $\lceil h/s\rceil=1$ y $\psi(h)=S_{T+h-s}$, que recorre los últimos $s$ índices estacionales $S_{T-s+1},\dots,S_T$; desde allí se repiten. Por tanto $(1-B^s)\psi(h)=\psi(h)-\psi(h-s)=0$ para $h-s\ge 1$, es decir, $h\ge s+1$.
-
-2. **El factor $(1-B^s)$ sobre la recta.** Para $h\ge s+1$:
-
-   $$(1-B^s)(a+bh)=(a+bh)-\big(a+b(h-s)\big)=bs,$$
-
-   una constante.
-
-3. **Se juntan los dos pasos.** Para $h\ge s+1$,
-
-   $$g(h):=(1-B^s)f(h)=bs+0=bs .$$
-
-4. **El factor $(1-B)$.** Para aplicarlo se necesitan $g(h)$ y $g(h-1)$, y ambos requieren índice $\ge s+1$, es decir, $h-1\ge s+1$, o sea $h\ge s+2$:
-
-   $$(1-B)(1-B^s)f(h)=g(h)-g(h-1)=bs-bs=0 .$$
-
-Como $(1-B)$ y $(1-B^s)$ conmutan, el orden en que se aplican no importa. En $h=s+1$ la expresión usaría $f(0)$, que no es un pronóstico; por eso el rango es $h\ge s+2$. $\blacksquare$
+![Demostración a mano, hoja 2: $(1-B)(1-B^s)f(h)=0$ para $h\ge s+2$.](../figs/3.jpeg){#fig-hw-mano-2 fig-alt="Segunda hoja de la demostración manuscrita: el factor (1 - B^s) sobre la recta da la constante bs, y al aplicar (1 - B) el resultado es bs menos bs, igual a cero, para h mayor o igual a s + 2." width="90%" fig-align="center"}
 
 **Solución general.** El polinomio característico se factoriza como
 
@@ -750,8 +711,6 @@ Las dos cantidades son del orden de $10^{-15}$, es decir, cero salvo error de re
 :::
 
 **Conexión con 4.2.** Los factores $(1-B)$ y $(1-B^s)$ de las candidatas de 4.2 son exactamente los que anulan estas funciones de pronóstico: $(1-B)^2$ anula la recta de Holt, y $(1-B)(1-B^s)$ anula la recta más el patrón estacional de Holt–Winters. Para $s=4$, las raíces $1$ (doble), $\pm i$ y $-1$ son las mismas de la tabla de la serie 2.
-
-
 
 # Dependencia y estacionariedad
 
@@ -1505,7 +1464,13 @@ bloque_6e("serie3")
 | 2 (miles de pasajeros) | Holt–Winters aditivo | 38,21 | 92,18 | Tendencia con ficticias | 41,30 | 90,35 |
 | 3 (miles de viajes) | Tendencia exponencial | 18,31 | 23,03 | Tendencia exponencial | 18,99 | 37,37 |
 
-
+<!--
+Sección 8 de informe/informe.qmd. Reemplaza el encabezado "Argumentos para los interesados"
+y el texto "Pendiente." que hoy hay en el informe.
+Todas las cifras salen del propio informe: ficha (sección 2), origen móvil (6.3),
+pronóstico final con su banda heurística y probabilidades de la serie 1 (6.5) y
+conclusión técnica (7). Las tablas son estáticas para que el bloque renderice siempre.
+-->
 
 # Argumentos para los interesados {#sec-interesados}
 
