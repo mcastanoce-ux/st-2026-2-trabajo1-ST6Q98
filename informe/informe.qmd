@@ -820,14 +820,10 @@ Cada gráfico lleva la banda de ruido blanco, $\pm 1{,}96/\sqrt{n}$, y en la ACF
 b5a("serie1")
 ```
 
-**Lectura de la ACF y la PACF.** *Pendiente.*
+**Lectura de la ACF y la PACF.** La serie 1 no se transformó (4(c)), así que se analiza la serie original. La ACF tiene su único valor grande en el primer rezago ($r_1=0{,}48$) y después cae rápido: no decae lentamente, como ocurriría con una tendencia, ni se repite cada 7 días, como ocurriría con una estacionalidad semanal. Fuera de la banda de ruido blanco quedan los rezagos 1, 4, 6 y 17; con la banda de Bartlett solo 1 y 4. Entre 24 rezagos es esperable que alguno salga por azar, de modo que 6 y 17 no se leen como estructura. La PACF es significativa en los rezagos 1 y 2 (con $\hat\phi_{11}=0{,}48$ y $\hat\phi_{22}\approx-0{,}28$) y en 4 y 5, y no se corta de forma clara: tiene valores significativos de signos alternados. La serie es consistente con nivel estable y dependencia de corto plazo, que se contrasta con los bloques de 5.3.
 
-**Qué pregunta responde cada banda.** *Pendiente.*
+**Qué pregunta responde cada banda.** La banda de ruido blanco, $\pm1{,}96/\sqrt n=\pm0{,}146$, responde si una autocorrelación es distinta de cero si la serie fuera ruido blanco: un rezago dentro de ella no se distingue de cero con estos datos. La banda de Bartlett responde hasta qué rezago llega la autocorrelación, es decir, si la ACF se corta; es más ancha en los rezagos mayores porque tiene en cuenta la autocorrelación ya observada en los menores, y por eso deja fuera menos rezagos (1 y 4). Para la PACF se usa la banda de ruido blanco, y responde si la PACF se corta después de un rezago $p$.
 
-<!-- Preguntas: ¿cómo es la forma de la ACF (cae de golpe, decae poco a poco, oscila)? ¿y la de la PACF?
-     ¿cuántos rezagos salen de cada banda? La banda de ruido blanco, ¿para qué pregunta sirve: para
-     decidir si UN rezago aislado es significativo en una serie sin autocorrelación, o si el rezago h
-     aporta autocorrelación nueva dado que los anteriores ya son significativos? ¿y la de Bartlett? -->
 
 ### Serie 2: pasajeros del aeropuerto
 
@@ -836,12 +832,9 @@ b5a("serie1")
 b5a("serie2")
 ```
 
-**Lectura de la ACF y la PACF.** *Pendiente.*
+**Lectura de la ACF y la PACF.** La serie 2 se transformó con $(1-B)(1-B^4)$ (4(c)), así que se analizan los $n=115$ valores de la serie diferenciada. La tendencia desapareció: la ACF ya no decae lentamente, y $r_1=-0{,}06$ queda dentro de la banda, es decir, trimestres consecutivos no están autocorrelacionados. Lo que queda es dependencia en el rezago estacional: $r_4\approx-0{,}31$ es el valor más grande y sale de las dos bandas. Fuera de la banda de ruido blanco quedan los rezagos 4, 7, 9, 10, 17 y 21; con la de Bartlett solo 4 y 21, de modo que los rezagos 7, 9, 10 y 17, de tamaño apenas mayor a la banda, no se leen como estructura. La PACF es significativa y negativa en los múltiplos de 4 ($\hat\phi_{44}\approx-0{,}34$, $\hat\phi_{88}\approx-0{,}38$, $\hat\phi_{12,12}\approx-0{,}33$ y $\hat\phi_{16,16}\approx-0{,}25$) y no se corta: decae lentamente a lo largo de esos rezagos. Un pico único en la ACF en $k=4$ junto con una PACF que decae en los múltiplos de 4 es la forma de una media móvil estacional.
 
-**Qué pregunta responde cada banda.** *Pendiente.*
-
-<!-- Preguntas: igual que en la serie 1. Además: ¿qué hay en los rezagos 4 y 8 (múltiplos de s = 4)?
-     ¿la transformación quitó la estacionalidad o queda algo? -->
+**Qué pregunta responde cada banda.** La banda de ruido blanco, $\pm1{,}96/\sqrt{n}=\pm0{,}183$; sirve para el rezago 1, que queda dentro, y como referencia general. La de Bartlett responde hasta qué rezago llega la autocorrelación, es decir, si la ACF se corta: al ser más ancha en los rezagos mayores, deja solo 4 y 21, y el rezago 4 es el que sobresale con claridad. Para la PACF se usa la banda de ruido blanco, y responde si la PACF se corta después de un rezago $p$; aquí no se corta en los múltiplos de 4.
 
 ### Serie 3: viajes de la plataforma
 
@@ -850,12 +843,9 @@ b5a("serie2")
 b5a("serie3")
 ```
 
-**Lectura de la ACF y la PACF.** *Pendiente.*
+**Lectura de la ACF y la PACF.** La serie 3 se transformó con $\log$ y $(1-B)$ (4(c)), así que se analizan los $n=143$ valores de $\nabla\log Y_t$. La ACF tiene un único pico grande y negativo en el primer rezago, $r_1\approx-0{,}42$, fuera de las dos bandas; después casi todos los rezagos quedan dentro. Fuera de la banda de ruido blanco ($\pm0{,}164$) están los rezagos 1 y 7, y con la de Bartlett solo el 1: el rezago 7 ($r_7\approx-0{,}18$) no tiene lectura en una serie mensual y se atribuye al azar entre 24 rezagos. La PACF es significativa en los rezagos 1, 2, 3 y 12, con valores negativos que decrecen ($\hat\phi_{11}\approx-0{,}42$, $\hat\phi_{22}\approx-0{,}39$, $\hat\phi_{33}\approx-0{,}20$); no se corta. Por tanto hay dependencia de corto plazo, y de un solo mes, y no de largo plazo. Una ACF que se corta tras el rezago 1 y una PACF que decae con el mismo signo es la forma de una media móvil de orden 1 con coeficiente negativo. El rezago 12 de la PACF ($\hat\phi_{12,12}\approx-0{,}20$) está aislado y la ACF no sale en 12, lo que concuerda con que no se atribuyó estacionalidad en 3(b).
 
-**Qué pregunta responde cada banda.** *Pendiente.*
-
-<!-- Preguntas: igual que en la serie 1. Además: ¿qué forma tienen la ACF y la PACF y qué dice eso de
-     r1 = -0,42 que viste en la sección 4? ¿hay algo en el rezago 12? -->
+**Qué pregunta responde cada banda.** La banda de ruido blanco, $\pm1{,}96/\sqrt{n}=\pm0{,}164$; deja fuera los rezagos 1 y 7. La de Bartlett  es más ancha y deja fuera solo el rezago 1, así que la ACF se corta en 1. Para la PACF se usa la banda de ruido blanco, y responde si se corta después de un rezago $p$; aquí no se corta y decae.
 
 :::
 
@@ -884,12 +874,11 @@ con $m$ grados de libertad porque no hay parámetros estimados. Para decidir con
 b5b("serie1")
 ```
 
-**Elección y justificación de $m$.** *Pendiente.*
+**Elección y justificación de $m$.** Se usó $m=14$, es decir, dos semanas: la serie es diaria, el ciclo natural es la semana y con 14 rezagos se cubren los rezagos 7 y 14, donde aparecería una dependencia semanal. La elección no cambia la decisión: con $m=5,7,10,14$ y $24$ el valor p es menor que $10^{-9}$ y se rechaza $H_0$ en todos los casos.
 
-**Procesos compatibles y no compatibles.** *Pendiente.*
+**Procesos compatibles y no compatibles.** La prueba rechaza $H_0$, así que la serie no es ruido blanco y el pasado ayuda a explicar el presente. La forma de la ACF y la PACF dice de qué tipo es esa dependencia. La ACF tiene un único pico en el rezago 1 ($r_1=0{,}48$) y luego $r_2=0{,}02$, dentro de la banda; la PACF, con $\hat\phi_{11}=0{,}48$ y $\hat\phi_{22}\approx-0{,}28$, alterna de signo y no se corta. Esto es compatible con un MA(1) con coeficiente positivo: $\rho_1=\theta/(1+\theta^2)=0{,}48$ implica $\theta\approx0{,}75$, y con ese valor la PACF teórica sería $\phi_{22}\approx-0{,}30$, cerca de lo observado. En términos de la serie, una espera alta un día tiende a seguirse de otra alta al día siguiente, y el efecto desaparece desde el segundo día. No es compatible con ruido blanco (Ljung–Box); con un AR(1) ($\phi=0{,}48$ daría $\rho_2\approx0{,}23$ y una PACF que se corta en 1, pero se observa $r_2=0{,}02$ y $\hat\phi_{22}$ fuera de la banda); con una estacionalidad semanal ($r_7=0{,}09$, dentro de la banda); ni con una raíz unitaria o una tendencia (la ACF cae de inmediato en lugar de decaer despacio).
 
-<!-- Preguntas: ¿por qué ese m y no otro (mira la tabla de sensibilidad: ¿cambia la decisión)? ¿qué
-     proceso de la tabla encaja con la forma de la ACF y la PACF y cuáles no, y por qué? -->
+
 
 ### Serie 2: pasajeros del aeropuerto
 
@@ -898,9 +887,9 @@ b5b("serie1")
 b5b("serie2")
 ```
 
-**Elección y justificación de $m$.** *Pendiente.*
+**Elección y justificación de $m$.** Se usó $m=8$, es decir, dos años: la serie es trimestral, el ciclo natural es el año (cuatro trimestres) y con 8 rezagos se cubren los rezagos 4 y 8, donde aparece la dependencia estacional. El estadístico $Q$ suma los cuadrados de las autocorrelaciones, por lo que crece con $m$ cuando se agregan rezagos con autocorrelación: pasa de 15,5 ($m=4$, $p=0{,}0037$) a 28,9 ($m=8$, $p=3{,}2\times10^{-4}$) y a 41,6 ($m=10$, $p=9\times10^{-6}$). Lo que sostiene la elección es que la decisión no depende de $m$: con $m=4,5,8,10$ y $24$ se rechaza $H_0$ al 5 %.
 
-**Procesos compatibles y no compatibles.** *Pendiente.*
+**Procesos compatibles y no compatibles.** La prueba rechaza $H_0$, de modo que la serie transformada no es ruido blanco. La ACF tiene un pico único y negativo en el rezago estacional ($r_4\approx-0{,}31$, fuera de las dos bandas), mientras $r_1=-0{,}06$ queda dentro; el rezago 10 sobresale solo de la banda de ruido blanco y no se interpreta. La PACF es negativa y significativa en los múltiplos de 4 ($\hat\phi_{44}\approx-0{,}34$, $\hat\phi_{88}\approx-0{,}38$, $\hat\phi_{12,12}\approx-0{,}33$, $\hat\phi_{16,16}\approx-0{,}25$). Esa forma es compatible con una media móvil estacional de período 4 con coeficiente negativo. El ajuste es solo cualitativo: $r_4=-0{,}31$ implica $\theta\approx-0{,}35$ y una PACF teórica que decaería rápido ($\phi_{88}\approx-0{,}11$), mientras que la observada se mantiene entre $-0{,}25$ y $-0{,}38$, lo que indica una dependencia estacional más persistente. No es compatible con ruido blanco (Ljung–Box); con un AR de orden bajo (la PACF no se corta); con un MA(1) no estacional (no hay pico en 1); con un AR estacional (daría $\rho_8\approx+0{,}1$ y se observa $r_8\approx-0{,}16$, y su PACF se cortaría en 4); ni con tendencia o raíz unitaria (la ACF no decae lentamente).
 
 ### Serie 3: viajes de la plataforma
 
@@ -909,9 +898,10 @@ b5b("serie2")
 b5b("serie3")
 ```
 
-**Elección y justificación de $m$.** *Pendiente.*
+**Elección y justificación de $m$.** Se usó $m=24$, es decir, dos años: la serie es mensual, el ciclo natural es el año (12 meses) y con 24 rezagos se cubren los rezagos 12 y 24, donde aparecería una estacionalidad anual. La elección no cambia la decisión: con $m=5,10,12$ y $24$ el valor p es menor que $10^{-4}$ y se rechaza $H_0$ en todos los casos. La evidencia viene casi toda del primer rezago (con $m=5$ ya se tiene $Q=31{,}5$); al aumentar $m$ hasta 24 el valor p sube un poco, de $5{,}7\times10^{-6}$ ($m=12$) a $7{,}2\times10^{-5}$, porque se suman muchos rezagos sin autocorrelación que diluyen la prueba.
 
-**Procesos compatibles y no compatibles.** *Pendiente.*
+**Procesos compatibles y no compatibles.** La prueba rechaza $H_0$: la serie transformada no es ruido blanco, y la dependencia es de un solo mes. La ACF se corta en el rezago 1 ($r_1\approx-0{,}42$, con $r_2$ dentro de la banda) y la PACF decae con signo negativo ($\hat\phi_{11}\approx-0{,}42$, $\hat\phi_{22}\approx-0{,}39$, $\hat\phi_{33}\approx-0{,}20$), que es la forma de un MA(1) con coeficiente negativo. En términos de la serie, un mes con crecimiento por encima de lo normal tiende a ir seguido de uno por debajo. El ajuste es cualitativo: $r_1=-0{,}42$ implica $\theta\approx-0{,}54$ y una PACF teórica de $\phi_{22}\approx-0{,}21$, menor que el $-0{,}39$ observado, es decir, la PACF observada decae más lentamente, lo que indica un coeficiente más cercano a $-1$. Un $r_1$ cercano a $-0{,}5$ es también lo que se obtiene al diferenciar una tendencia determinista más ruido, lo que concuerda con la cautela de 4(c) y con 6(b). No es compatible con ruido blanco (Ljung–Box); con un AR(1) (su PACF se cortaría en 1, pero $\hat\phi_{22}$ y $\hat\phi_{33}$ salen de la banda, y daría $\rho_2\approx+0{,}18$ frente al $r_2\approx-0{,}14$ observado); con una estacionalidad anual ($r_{12}\approx-0{,}09$, dentro de la banda; el $\hat\phi_{12,12}\approx-0{,}20$ aislado no se interpreta); ni con un paseo aleatorio, que ya se eliminó con $(1-B)$ y cuya ACF decaería despacio.
+
 
 :::
 
@@ -932,16 +922,17 @@ y su error estándar es $\hat\sigma_{LP}/\sqrt{n}$.
 b5c("serie1")
 ```
 
-**Estacionariedad por bloques.** *Pendiente.*
+```{r}
+#| include: false
+z51 <- res$res5$serie1
+b51 <- z51$bloques
+```
 
-**Los dos errores estándar: por qué difieren y cuál es el adecuado.** *Pendiente.*
+**Estacionariedad por bloques.** La serie 1 es compatible con estacionariedad: en los cuatro bloques consecutivos la media se mantiene en torno a un mismo nivel (entre `r fmt(min(b51$media), 1)` y `r fmt(max(b51$media), 1)` s) y la varianza oscila entre `r fmt(min(b51$varianza), 1)` y `r fmt(max(b51$varianza), 1)` s² sin un patrón creciente ni decreciente.
 
-**Qué representa la media en términos de la serie original.** *Pendiente.*
+**Los dos errores estándar: por qué difieren y cuál es el adecuado.** El error estándar ingenuo es `r fmt(z51$se_ing, 3)` s y el de largo plazo es `r fmt(z51$se_lp, 3)` s. Difieren porque el ingenuo supone observaciones incorrelacionadas, mientras que la serie tiene autocorrelación positiva ($r_1=`r fmt(z51$r[1], 2)`$): los datos vecinos repiten información y la media es menos precisa de lo que el ingenuo supone. El de largo plazo incorpora esa dependencia a través de las autocovarianzas, y por eso es mayor (razón de `r fmt(z51$se_lp / z51$se_ing, 2)`). El adecuado es el de largo plazo: el ingenuo subestima la incertidumbre y da un intervalo del 95 % más estrecho ([`r fmt(z51$ic_ing[1], 1)`; `r fmt(z51$ic_ing[2], 1)`]) que el de largo plazo ([`r fmt(z51$ic_lp[1], 1)`; `r fmt(z51$ic_lp[2], 1)`]).
 
-<!-- Preguntas: ¿las medias y las varianzas de los cuatro bloques son parecidas o cambian de forma
-     sistemática? ¿qué diferencia hay entre los dos errores estándar y a qué se debe (mira el signo de
-     las autocorrelaciones del correlograma)? ¿cuál de los dos intervalos es el adecuado y por qué?
-     ¿qué es, en la serie original, esa media (un nivel, un crecimiento, un cambio)? -->
+**Qué representa la media en términos de la serie original.** Como la serie 1 no se transformó, la media de `r fmt(z51$media, 1)` s es el nivel medio del tiempo de espera diario en la estación, y tiene sentido hablar de una sola media porque la serie es estacionaria. Con el intervalo de largo plazo, ese nivel queda por debajo de la meta de 330 s.
 
 ### Serie 2: pasajeros del aeropuerto
 
@@ -950,11 +941,17 @@ b5c("serie1")
 b5c("serie2")
 ```
 
-**Estacionariedad por bloques.** *Pendiente.*
+```{r}
+#| include: false
+z52 <- res$res5$serie2
+b52 <- z52$bloques
+```
 
-**Los dos errores estándar: por qué difieren y cuál es el adecuado.** *Pendiente.*
+**Estacionariedad por bloques.** La media de los cuatro bloques va de `r fmt(min(b52$media), 1)` a `r fmt(max(b52$media), 1)`, una diferencia pequeña frente al error estándar de cada media (de `r fmt(min(b52$desv / sqrt(b52$n)), 1)` a `r fmt(max(b52$desv / sqrt(b52$n)), 1)`), por lo que es compatible con una constante cercana a cero. La varianza cambia más: va de `r fmt(min(b52$varianza), 0)` a `r fmt(max(b52$varianza), 0)` (cociente de `r fmt(max(b52$varianza) / min(b52$varianza), 2)`), con valores mayores en los bloques centrales. La serie es aproximadamente estacionaria en media, con una variabilidad algo cambiante.
 
-**Qué representa la media en términos de la serie original.** *Pendiente.*
+**Los dos errores estándar: por qué difieren y cuál es el adecuado.** El error estándar ingenuo es `r fmt(z52$se_ing, 2)` y el de largo plazo es `r fmt(z52$se_lp, 2)` miles de pasajeros. Difieren porque la serie transformada tiene autocorrelaciones negativas en los primeros rezagos ($r_3=`r fmt(z52$r[3], 2)`$ y $r_4=`r fmt(z52$r[4], 2)`$, esta última fuera de la banda), y al sumarlas la varianza de largo plazo queda por debajo de $\hat\gamma(0)$ (factor de `r fmt(z52$var_lp / z52$gamma0, 2)`). El adecuado es el de largo plazo, porque incorpora esa dependencia que el ingenuo ignora; sus intervalos del 95 % son [`r fmt(z52$ic_lp[1], 1)`; `r fmt(z52$ic_lp[2], 1)`] (largo plazo) y [`r fmt(z52$ic_ing[1], 1)`; `r fmt(z52$ic_ing[2], 1)`] (ingenuo).
+
+**Qué representa la media en términos de la serie original.** La serie transformada es $(1-B)(1-B^4)Y_t=(Y_t-Y_{t-4})-(Y_{t-1}-Y_{t-5})$, el cambio entre un trimestre y el siguiente de la diferencia interanual. Su media, `r fmt(z52$media, 2)` en miles de pasajeros (unos `r fmt(1000 * z52$media, 0)` pasajeros), no es un nivel de pasajeros. Si la serie tuviera una tendencia lineal y una estacionalidad fija, esa media sería 0; el intervalo de largo plazo contiene el 0, de modo que los datos no contradicen esa descripción.
 
 ### Serie 3: viajes de la plataforma
 
@@ -962,12 +959,17 @@ b5c("serie2")
 #| output: asis
 b5c("serie3")
 ```
+```{r}
+#| include: false
+z53 <- res$res5$serie3
+b53 <- z53$bloques
+```
 
-**Estacionariedad por bloques.** *Pendiente.*
+**Estacionariedad por bloques.** La media de los cuatro bloques va de `r fmt(min(b53$media), 4)` a `r fmt(max(b53$media), 4)`, una diferencia menor que el error estándar de cada media (de `r fmt(min(b53$desv / sqrt(b53$n)), 4)` a `r fmt(max(b53$desv / sqrt(b53$n)), 4)`), y la varianza va de `r fmt(min(b53$varianza), 4)` a `r fmt(max(b53$varianza), 4)` sin un patrón creciente ni decreciente. La serie transformada es compatible con estacionariedad.
 
-**Los dos errores estándar: por qué difieren y cuál es el adecuado.** *Pendiente.*
+**Los dos errores estándar: por qué difieren y cuál es el adecuado.** El error estándar ingenuo es `r fmt(z53$se_ing, 4)` y el de largo plazo es `r fmt(z53$se_lp, 4)`, la mitad. Difieren porque la autocorrelación en el rezago 1 es fuerte y negativa ($r_1=`r fmt(z53$r[1], 2)`$), de modo que al sumarla la varianza de largo plazo queda en solo el `r fmt(100 * z53$var_lp / z53$gamma0, 0)` % de $\hat\gamma(0)$. Además, la media de $\nabla\log Y_t$ es $(\log Y_T-\log Y_1)/(T-1)$, depende solo del primer y del último dato, y por eso se estima con mucha más precisión de la que supone el ingenuo. El adecuado es el de largo plazo, con intervalo del 95 % de [`r fmt(z53$ic_lp[1], 4)`; `r fmt(z53$ic_lp[2], 4)`].
 
-**Qué representa la media en términos de la serie original.** *Pendiente.*
+**Qué representa la media en términos de la serie original.** La media de $\nabla\log Y_t$ es la tasa media de crecimiento mensual: `r fmt(100 * z53$media, 2)` % al mes, es decir, un crecimiento anual cercano a `r fmt(100 * (exp(12 * z53$media) - 1), 1)` %. Con el intervalo de largo plazo, el crecimiento anual estaría entre `r fmt(100 * (exp(12 * z53$ic_lp[1]) - 1), 1)` % y `r fmt(100 * (exp(12 * z53$ic_lp[2]) - 1), 1)` %.
 
 :::
 
@@ -1503,9 +1505,151 @@ bloque_6e("serie3")
 | 2 (miles de pasajeros) | Holt–Winters aditivo | 38,21 | 92,18 | Tendencia con ficticias | 41,30 | 90,35 |
 | 3 (miles de viajes) | Tendencia exponencial | 18,31 | 23,03 | Tendencia exponencial | 18,99 | 37,37 |
 
-# Argumentos para los interesados
 
-*Pendiente.*
+
+# Argumentos para los interesados {#sec-interesados}
+
+Esta sección traduce los resultados de las secciones anteriores para quienes toman, ejecutan o sufren las decisiones que cada serie describe y que no conocen el curso. Las cifras son las del análisis. Dos advertencias valen para toda la sección: las bandas que se citan son heurísticas (el pronóstico más o menos 1,96 veces el error típico observado en la evaluación) y no intervalos de confianza, y las probabilidades de la serie 1 se calculan con la misma heurística.
+
+## Mapa de interesados {#sec-mapa-interesados}
+
+En cada tabla, "por defecto" quiere decir que el pronóstico queda por debajo de lo que ocurre y "por exceso" que queda por encima. Las celdas marcadas *(inferido)* no vienen del contexto: son una lectura del equipo. Donde el contexto no da una cifra en pesos, se dice y no se inventa.
+
+### Serie 1: espera en la estación Los Almendros
+
+| Interesado | Decisión concreta con el pronóstico | Error por defecto | Error por exceso |
+|:--|:--|:--|:--|
+| Operador de la estación | Cada viernes decide cuántos buses de refuerzo despacha la semana siguiente | No refuerza y el promedio del día pasa de 330 s: multa de 12 millones de pesos por día | Refuerza sin necesidad: 1,1 millones de pesos por bus y por día |
+| Gerencia del sistema | Vigila el cumplimiento del contrato y aprueba el presupuesto de operación *(inferido)* | Multas por incumplimiento: 12 millones de pesos por día sobre la meta | Pago de refuerzos que no cambian el resultado: 1,1 millones por bus y por día |
+| Usuarios | No deciden; ajustan la hora de salida según la espera que esperan encontrar *(inferido)* | Esperas de más de 5,5 minutos (330 s) sin aviso; costo en tiempo, sin cifra en pesos | Sin costo directo |
+
+: Mapa de interesados de la serie 1. {#tbl-mapa-s1}
+
+Un error por defecto cuesta unas 11 veces lo que cuesta un error por exceso (12 frente a 1,1 millones de pesos, por día y por bus).
+
+### Serie 2: pasajeros del aeropuerto
+
+| Interesado | Decisión concreta con el pronóstico | Error por defecto | Error por exceso |
+|:--|:--|:--|:--|
+| Concesionario | Presenta cada año el plan de personal de seguridad y de apertura de salas para los cuatro trimestres siguientes | Congestión en los filtros: sanciones y pérdida de rutas (el contexto no da la cifra en pesos) | 90 millones de pesos por cada sala abierta sin pasajeros, por trimestre |
+| Aerolíneas | Planean frecuencias y rutas sobre la capacidad que el aeropuerto declara *(inferido)* | Demoras en los filtros y riesgo de perder rutas (sin cifra) | Sin costo directo en el contexto |
+| Autoridad aeronáutica | Revisa el plan y sanciona la congestión *(inferido)* | Debe sancionar por filtros congestionados (sin cifra) | Aprueba un plan sobredimensionado; el costo lo asume el concesionario |
+| Pasajeros | No deciden | Filas largas en seguridad | Sin costo directo |
+
+: Mapa de interesados de la serie 2. {#tbl-mapa-s2}
+
+### Serie 3: viajes de la plataforma de movilidad
+
+| Interesado | Decisión concreta con el pronóstico | Error por defecto | Error por exceso |
+|:--|:--|:--|:--|
+| Gerencia de operaciones | Contrata capacidad de servidores por semestre y abre la vinculación de conductores, un proceso de tres meses | Cada viaje que no se atiende se pierde y deteriora la calificación (el contexto no da la cifra en pesos) | Servidores contratados y conductores vinculados sin viajes que atender (sin cifra) |
+| Conductores | Deciden si se vinculan y cuánto trabajan según la demanda esperada *(inferido)* | Pocos conductores para la demanda: jornadas más largas *(inferido)* | Demasiados conductores: menos viajes y menos ingreso por conductor *(inferido)* |
+| Secretaría de movilidad | Regula el número de vehículos autorizados | Autoriza pocos vehículos y quedan viajes sin atender | Autoriza vehículos de más: congestión y vehículos subutilizados *(inferido)* |
+| Usuarios | No deciden | Viajes que no se atienden | Sin costo directo |
+
+: Mapa de interesados de la serie 3. {#tbl-mapa-s3}
+
+## El argumento {#sec-argumento}
+
+::: {.panel-tabset}
+
+### Serie 1: espera en estación {.unnumbered}
+
+**Afirmación.** La semana siguiente se espera superar los 330 segundos de espera en menos de un día de los siete, así que no conviene reforzar toda la semana; a lo sumo, un bus el domingo y el lunes, que son los días de mayor riesgo.
+
+**Evidencia.**
+
+- En las 180 mediciones diarias, la espera promedio estuvo en 298,8 s, con un mínimo de 255 s y un máximo de 353 s. La meta de 330 s queda 31 s por encima de ese promedio.
+- Para la semana del lunes 6 al domingo 12 de octubre de 2025, el pronóstico va de 285,4 a 299,3 s. El error típico del pronóstico crece de 28 s (lunes) a 37 s (domingo).
+- La probabilidad aproximada de superar los 330 s cada día, y lo que costaría esperar la multa frente a mandar un bus:
+
+| Día | Pronóstico (s) | Probabilidad de superar 330 s | Multa esperada (millones de pesos) | Un bus (millones de pesos) |
+|:--|--:|--:|--:|--:|
+| Lunes 6 | 299,3 | 13,8 % | 1,66 | 1,10 |
+| Martes 7 | 291,5 | 10,7 % | 1,28 | 1,10 |
+| Miércoles 8 | 288,9 | 8,7 % | 1,04 | 1,10 |
+| Jueves 9 | 287,2 | 8,9 % | 1,07 | 1,10 |
+| Viernes 10 | 285,4 | 9,6 % | 1,15 | 1,10 |
+| Sábado 11 | 287,4 | 12,2 % | 1,46 | 1,10 |
+| Domingo 12 | 294,9 | 17,4 % | 2,09 | 1,10 |
+| **Semana** | | **0,81 días** | **9,76** | **7,70** |
+
+: Riesgo diario de superar la meta y costo del refuerzo, serie 1. {#tbl-arg-s1}
+
+**Justificación.** La espera ha oscilado alrededor de 299 s, sin una tendencia a subir ni un patrón por día de la semana, y la meta está a unos 31 s de ese nivel, apenas un poco más que el error típico del pronóstico. Por eso pasar la meta es posible, pero poco frecuente: en promedio, menos de un día de la semana. Mandar un bus cuesta 1,1 millones y una multa cuesta 12, de modo que mandarlo solo tiene sentido un día cuando la probabilidad de pasar la meta supera 1,1 sobre 12, es decir, 9,2 %, y eso suponiendo que un bus basta para evitar la multa. Domingo, lunes y, en menor medida, sábado superan ese umbral con holgura; miércoles y jueves quedan por debajo, y martes y viernes quedan en el límite. Si se mandara un bus los siete días se pagarían 7,7 millones para evitar una multa esperada de 9,8 millones: la ganancia es de unos 2 millones en el mejor caso y desaparece si el bus no evita la multa del todo.
+
+**Alcance.** La recomendación vale para la semana del 6 al 12 de octubre de 2025 (de 3 a 9 días después del viernes de la decisión) y debe recalcularse cada viernes. Supone que el nivel de espera no cambia (sin obras, cierres u otros cambios en la operación) y que un solo bus evita la multa del día, que es la hipótesis más favorable al refuerzo; si un bus no basta, el refuerzo vale menos. Si se calcula el riesgo con el método que mejor funcionó a nueve días, el promedio histórico (error típico de 19,2 s), la probabilidad diaria baja a cerca de 5 % y ningún día justifica un bus; las dos lecturas coinciden en que no vale la pena reforzar toda la semana. La recomendación cambiaría si la espera de algún día supera los 350 s, que es aproximadamente el límite superior del lunes, o si cambian la multa o el costo del bus.
+
+**Objeción.** *Si el error típico es de 28 a 37 segundos y la meta está solo 31 segundos por encima del promedio, ¿cómo sabemos que el domingo no será uno de los días malos?*
+
+**Respuesta.** No se sabe, y el análisis no lo promete: el domingo la probabilidad de pasar los 330 s es de 17,4 %, un domingo de cada seis, la más alta de la semana. Por eso es el único día en que la multa esperada (2,09 millones) casi duplica el costo de un bus (1,10 millones), y por eso es el primero que se refuerza. En los demás días la multa esperada está entre 1,04 y 1,66 millones frente a 1,10 del bus, una diferencia pequeña que no justifica el gasto.
+
+### Serie 2: pasajeros del aeropuerto {.unnumbered}
+
+**Afirmación.** En 2026 se esperan unos 15,4 millones de pasajeros, con el tercer trimestre como el más cargado, cerca de 4 millones, así que el personal de seguridad y las salas deben dimensionarse para ese trimestre y no para el promedio del año.
+
+**Evidencia.**
+
+- El pronóstico de cada trimestre de 2026, con su margen aproximado (el pronóstico más o menos 1,96 veces el error típico):
+
+| Trimestre de 2026 | Pronóstico (miles de pasajeros) | Margen aproximado (miles) | Rango aproximado (miles) |
+|:--|--:|--:|:--|
+| Primero | 3696,2 | ± 76,0 | 3620,2 a 3772,2 |
+| Segundo | 3872,2 | ± 110,4 | 3761,8 a 3982,6 |
+| Tercero | 4000,3 | ± 126,7 | 3873,7 a 4127,0 |
+| Cuarto | 3784,7 | ± 141,8 | 3642,9 a 3926,6 |
+
+: Pronóstico de pasajeros por trimestre, serie 2. {#tbl-arg-s2}
+
+- El total de los cuatro trimestres es de 15 353,4 miles de pasajeros. El tercer trimestre (4000,3) supera el máximo histórico de la serie, 3942,6 miles.
+- El error típico va de 38,8 miles (primer trimestre) a 72,4 miles (cuarto), entre 1,0 % y 1,9 % del nivel pronosticado.
+- Repetir el trimestre del año anterior se equivoca en promedio 92,2 miles a un trimestre; el método usado, 38,2 miles (58,6 % menos). A cuatro trimestres, el error baja de 90,4 a 70,7 miles (21,7 % menos).
+
+**Justificación.** El tráfico del aeropuerto crece de manera sostenida y repite cada año la misma forma: sube hacia el tercer trimestre y baja al final del año. El método sigue las dos cosas a la vez, el crecimiento y la forma del año. La diferencia entre el trimestre más alto y el más bajo es de unos 304 mil pasajeros, entre cuatro y ocho veces el error típico (39 a 72 mil), así que la forma del año es una señal firme y no un efecto del azar. Abrir una sala de más cuesta 90 millones de pesos por trimestre; quedarse corto trae sanciones y pérdida de rutas, que el contexto no cuantifica. Si el concesionario considera que esas sanciones pesan más que 90 millones por sala, el margen superior del tercer trimestre (4127,0 miles) es una referencia prudente para el plan.
+
+**Alcance.** El pronóstico cubre los cuatro trimestres de 2026 y es más confiable al principio (margen de 76 mil en el primer trimestre frente a 142 mil en el cuarto); no se evaluó para más de un año. Supone que no cambian las rutas ni las aerolíneas que operan y que el crecimiento sigue su ritmo. Cualquier cambio conocido de rutas que mueva más de 2 a 4 % del tráfico de un trimestre (76 mil es el 2,1 % del primero y 142 mil el 3,7 % del cuarto) debe sumarse o restarse a mano, porque el pronóstico no lo ve. En la comparación a cuatro trimestres de la sección 6.3, otro método, la tendencia con estacionalidad fija, tuvo un error típico menor (41,3 miles frente a 70,7); por eso el plan conviene contrastarlo con ese pronóstico antes de cerrarlo. Si un trimestre cae fuera del rango aproximado dos veces seguidas, hay que reestimar.
+
+**Objeción.** *Repetir el trimestre del año anterior es más simple y es lo que ya se hace. ¿Por qué cambiar?*
+
+**Respuesta.** Porque se equivoca más del doble a un trimestre: 92,2 miles de pasajeros frente a 38,2 del método usado. Repetir el trimestre pasado ignora que el tráfico crece, así que en una serie que sube cada año tiende a quedarse corto, que es justamente el error que trae sanciones y pérdida de rutas. A cuatro trimestres la ventaja se reduce a 21,7 % (70,7 frente a 90,4 miles); por eso el plan debe revisarse cada año con los datos nuevos.
+
+### Serie 3: viajes de la plataforma {.unnumbered}
+
+**Afirmación.** Se esperan unos 2,84 millones de viajes entre enero y junio de 2026, con un aumento mes a mes hasta cerca de 487 mil viajes en junio, así que los servidores y los conductores deben contratarse para ese ritmo creciente y no para el nivel de hoy.
+
+**Evidencia.**
+
+- El pronóstico de cada mes de 2026, con su margen aproximado:
+
+| Mes de 2026 | Pronóstico (miles de viajes) | Rango aproximado (miles) |
+|:--|--:|:--|
+| Enero | 458,5 | 422,1 a 494,9 |
+| Febrero | 464,1 | 427,6 a 500,6 |
+| Marzo | 469,7 | 433,7 a 505,7 |
+| Abril | 475,4 | 438,4 a 512,4 |
+| Mayo | 481,2 | 443,7 a 518,6 |
+| Junio | 487,0 | 449,0 a 525,0 |
+
+: Pronóstico de viajes por mes, serie 3. {#tbl-arg-s3}
+
+- El semestre suma 2835,7 miles de viajes, y entre enero y junio el pronóstico sube 6,2 % (de 458,5 a 487,0 miles).
+- El error típico es de 18,4 a 19,4 miles de viajes en cualquiera de los seis meses, alrededor del 4 % del nivel pronosticado.
+- Repetir el último mes se equivoca en promedio 23,0 miles a un mes y 37,4 miles a seis; el método usado, 18,3 y 19,0 miles (20,5 % y 49,2 % menos).
+
+**Justificación.** Los viajes han crecido con una curva, no con una línea recta: cada mes aumentan en un porcentaje parecido y la variación de un mes a otro crece con el nivel. El método que supone ese crecimiento constante en porcentaje fue el que mejor acertó al probarlo con datos que no había usado (29 meses para un mes de anticipación y 24 para seis meses). Repetir el último mes, en cambio, se equivoca el doble a seis meses porque ignora que la demanda sigue subiendo. Como vincular conductores toma tres meses, los de abril a junio deben empezar a vincularse desde enero, y para esos meses el pronóstico tiene el mismo error típico, cerca de 19 mil viajes. El contexto no da la cifra en pesos de un viaje perdido ni de un servidor ocioso; si perder viajes pesa más que sobrar capacidad, el margen superior (525,0 miles en junio) es la referencia prudente.
+
+**Alcance.** El pronóstico cubre de enero a junio de 2026, seis meses, y no se evaluó para más. Supone que el crecimiento sigue su curva: sin cambios en el número de vehículos autorizados por la secretaría de movilidad, sin nuevos competidores y sin cambios de tarifa. Cambiaría si dos meses seguidos los viajes quedan por debajo del límite inferior del rango (422,1 miles en enero, 427,6 en febrero): sería la señal de que el crecimiento se frenó y hay que reestimar antes de contratar el semestre siguiente.
+
+**Objeción.** *Si el crecimiento se frena, ¿no estaremos contratando capacidad de más durante todo el semestre?*
+
+**Respuesta.** Es el riesgo real de este pronóstico: la capacidad se contrata por semestre y no se puede devolver a mitad de camino. Pero suponer que el crecimiento ya se detuvo ha sido el error más caro hasta ahora: en la evaluación a seis meses, repetir el último mes se equivocó 37,4 miles de viajes frente a 19,0 del método con crecimiento. Para limitar el riesgo, se contrata la capacidad del pronóstico central (487,0 miles en junio) y no la del margen superior, y se escalona la vinculación de conductores mes a mes: si junio termina por debajo de 449,0 miles, unos 8 % bajo el pronóstico, el crecimiento se frenó.
+
+:::
+
+## La nota para los interesados {#sec-nota}
+
+La nota de una página, sin fórmulas ni términos del curso y con un solo gráfico por serie, está en `informe/nota-interesados.pdf`. Responde la pregunta de cada interesado (cuántos días se espera superar la meta en la serie 1, cuántos pasajeros por trimestre en la serie 2 y cuántos viajes por mes en la serie 3), traduce el error típico a una consecuencia para la decisión y dice lo que el pronóstico no puede garantizar.
+
 
 # README, reproducibilidad y uso de Git
 
