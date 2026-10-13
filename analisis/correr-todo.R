@@ -1,19 +1,3 @@
-# =============================================================================
-# analisis/correr-todo.R  --  Equipo ST6Q98
-# Se ejecuta desde la raiz del repositorio:  source("analisis/correr-todo.R")
-#
-# Organizacion:
-#   Bloque 0   Configuracion: paquetes, funciones de R/, series
-#   Bloque V   Verificacion de funciones propias (secciones 4 y 5)
-#   Seccion 2  Series y pregunta de pronostico   (2a y 2c hechos; 2b va en el informe)
-#   Seccion 3  Descripcion y patron               (3a, 3b y 3c hechos)
-#   Seccion 4  Operador de rezago                 (4a, 4b y 4c hechos; 4d va en el informe)
-#   Bloque V6  Verificacion de los metodos de pronostico (seccion 6a)
-#   Seccion 5  Dependencia y estacionariedad
-#   Seccion 6  Pronostico y evaluacion            (6a y 6b hechos; 6c a 6e pendientes)
-#   Cierre     resultados.rds, sessionInfo() y tiempo de ejecucion
-# =============================================================================
-
 
 # =============================================================================
 # BLOQUE 0. CONFIGURACION
@@ -1108,6 +1092,170 @@ for (z in res6b) {
 }
 
 
+# ---- 6(c) Origen movil -------------------------------------------------------
+# Para cada serie y cada metodo aplicado en 6(a), incluido el contraste y el referente:
+#   1. las constantes se eligen con optimizar() SOLO en y[1..n0], sobre la rejilla del
+#      catalogo (la curva o el mapa de MSE se guarda en figs/);
+#   2. se evalua por origen movil con esas constantes fijas, con los mismos origenes para
+#      todos los metodos de la serie (h = 1: o = n0..T-1; h = H: o = n0..T-H).
+# El referente de cada serie es el ingenuo que asignacion_6a marca con rol "referente"
+# (la justificacion esta en la asignacion y en el informe). Es una fila mas de la tabla,
+# calculada sobre los mismos origenes. Un metodo que no lo supera no se descarta.
+# El GANADOR de cada serie es el de menor RMSE a h = 1; tambien se guarda el mejor a h = H.
+
+hacer_6c <- function(id, cfg, datos, aplic, part) {
+  y <- datos$valor
+  n0 <- part$n0[1]
+  H <- part$H[1]
+  stopifnot("n0 distinto de floor(0.8 T)" = n0 == floor(0.8 * length(y)),
+            "H distinto del de la configuracion" = H == cfg$H)
+  rej_todas <- rejillas()
+  evals <- list()
+  filas <- list()
+  for (i in seq_len(nrow(aplic))) {
+    m <- aplic$metodo[i]
+    rej <- if (is.na(aplic$rejilla[i])) NULL else rej_todas[[aplic$rejilla[i]]]
+    message(id, ": 6(c) ", aplic$nombre[i], " ...")
+    ev <- evaluar_metodo(y, catalogo_6[[m]]$f, n0, H, rej, fijos_6(m, id))
+    evals[[m]] <- ev
+    if (!is.null(ev$curva)) {
+      npar <- ncol(ev$curva) - 1L
+      guardar_fig(
+        grafico_mse(ev$curva, paste0(cfg$corto, ": MSE de ", aplic$nombre[i])),
+        paste0(id, "-6c-mse-", m),
+        ancho = if (npar == 1L) 6.5 else if (npar == 2L) 7 else 10,
+        alto  = if (npar == 1L) 3.8 else if (npar == 2L) 5 else 7.5)
+    }
+    filas[[i]] <- tibble::tibble(
+      metodo = m, nombre = aplic$nombre[i], rol = aplic$rol[i],
+      parametros = texto_parametros(ev$parametros), mse_est = ev$mse_est,
+      n1 = ev$m1$n, RMSE1 = ev$m1$RMSE, MAD1 = ev$m1$MAD, MAPE1 = ev$m1$MAPE,
+      nH = ev$mH$n, RMSEH = ev$mH$RMSE, MADH = ev$mH$MAD, MAPEH = ev$mH$MAPE)
+  }
+  tabla <- dplyr::bind_rows(filas)
+  
+  # Una tabla por horizonte, ordenada de menor a mayor RMSE, con el RMSE relativo al referente
+  armar <- function(h1) {
+    if (h1) {
+      t <- dplyr::transmute(tabla, metodo, nombre, rol, parametros, n = n1,
+                            RMSE = RMSE1, MAD = MAD1, MAPE = MAPE1)
+    } else {
+      t <- dplyr::transmute(tabla, metodo, nombre, rol, parametros, n = nH,
+                            RMSE = RMSEH, MAD = MADH, MAPE = MAPEH)
+    }
+    t <- t[order(t$RMSE), ]
+    t$RMSE_rel <- t$RMSE / t$RMSE[t$rol == "referente"]
+    t
+  }
+  tabla_h1 <- armar(TRUE)
+  tabla_hH <- armar(FALSE)
+  
+  # Origenes: comprobacion de que todos los metodos usan los mismos
+  stopifnot("distinto numero de errores entre metodos" =
+              length(unique(tabla$n1)) == 1L && length(unique(tabla$nH)) == 1L,
+            "numero de origenes h = 1 distinto de T - n0" = tabla$n1[1] == length(y) - n0,
+            "numero de origenes h = H distinto de T - H - n0 + 1" = tabla$nH[1] == length(y) - H - n0 + 1)
+  
+  list(tabla = tabla, tabla_h1 = tabla_h1, tabla_hH = tabla_hH, evals = evals,
+       ganador = tabla_h1$metodo[1], ganador_H = tabla_hH$metodo[1],
+       referente = tabla$metodo[tabla$rol == "referente"],
+       n0 = n0, H = H, T = length(y))
+}
+
+res6c <- purrr::imap(series_cfg, function(cfg, id) {
+  hacer_6c(id, cfg, datos_series[[id]], aplicados_6[aplicados_6$serie == id, ],
+           particiones[particiones$serie == id, ])
+})
+
+resumen6c <- dplyr::bind_rows(lapply(names(res6c), function(id) {
+  z <- res6c[[id]]
+  g <- z$tabla[z$tabla$metodo == z$ganador, ]
+  r <- z$tabla[z$tabla$metodo == z$referente, ]
+  gH <- z$tabla[z$tabla$metodo == z$ganador_H, ]
+  tibble::tibble(serie = id, transformacion = transformacion_txt[[id]],
+                 ganador = g$nombre, parametros = g$parametros, referente = r$nombre,
+                 RMSE1_ganador = g$RMSE1, RMSE1_referente = r$RMSE1,
+                 ganador_H = gH$nombre, parametros_H = gH$parametros,
+                 RMSEH_ganador = gH$RMSEH, RMSEH_referente = r$RMSEH)
+}))
+cat("\nRESUMEN 6(c): ganador a h = 1 y mejor a h = H, frente al referente\n")
+print(as.data.frame(resumen6c), digits = 4)
+for (id in names(res6c)) {
+  z <- res6c[[id]]
+  cat("\n", strrep("=", 70), "\n", id, " (n0 = ", z$n0, ", H = ", z$H, ")  h = 1:\n", sep = "")
+  print(as.data.frame(z$tabla_h1), digits = 4)
+  cat("\nh = ", z$H, ":\n", sep = "")
+  print(as.data.frame(z$tabla_hH), digits = 4)
+}
+
+# ---- 6(d) Validacion del ganador sobre sus errores de origen movil a un paso -----
+# Errores en el tiempo, correlograma (banda sobre el numero de errores), prueba t de media
+# cero, Ljung-Box referido a chi^2_m y Jarque-Bera con sus seis elementos, y Durbin-Watson.
+# m de Ljung-Box = min(m_lb de la serie, floor(n/4)): con pocos errores no se piden mas
+# rezagos de los que sostienen.
+
+res6d <- purrr::imap(series_cfg, function(cfg, id) {
+  z <- res6c[[id]]
+  ev <- z$evals[[z$ganador]]
+  v <- validar_ganador(ev$om, m_lb[[id]])
+  fechas_obj <- datos_series[[id]]$fecha[v$objetivo]
+  guardar_fig(grafico_errores_6d(fechas_obj, v$e, v$r, v$n, cfg$corto, cfg$unidad),
+              paste0(id, "-6d-errores"), ancho = 11, alto = 4.5)
+  v$fechas <- fechas_obj
+  v$metodo <- z$ganador
+  v$nombre <- z$tabla$nombre[z$tabla$metodo == z$ganador]
+  v$lectura_rezagos <- lectura_rezagos(v$fuera, cfg$s_candidato)
+  v
+})
+for (id in names(res6d)) {
+  v <- res6d[[id]]
+  cat("\n", strrep("=", 70), "\n", id, ": 6(d) errores a un paso de ", v$nombre,
+      " (n = ", v$n, ", m del correlograma = ", v$m, ", m de Ljung-Box = ", v$m_test, ")\n", sep = "")
+  print(v$validacion$t); cat("\n")
+  print(v$validacion$ljung_box); cat("\n")
+  print(v$validacion$jarque_bera); cat("\n")
+  print(round(v$validacion$durbin_watson, 3))
+  cat(v$lectura_rezagos, "\n")
+}
+
+# ---- 6(e) Pronostico final ----------------------------------------------------------
+# El ganador reajustado sobre toda la serie, con las constantes elegidas en y[1..n0];
+# H pronosticos junto al ultimo tramo de la serie, con una banda HEURISTICA de +/- 1,96
+# veces la desviacion de los errores de origen movil a cada horizonte.
+ultimo_tramo <- c(serie1 = 45, serie2 = 40, serie3 = 48)
+
+res6e <- purrr::imap(series_cfg, function(cfg, id) {
+  z <- res6c[[id]]
+  ev <- z$evals[[z$ganador]]
+  d <- datos_series[[id]]
+  nombre_g <- z$tabla$nombre[z$tabla$metodo == z$ganador]
+  pf <- pronostico_final(d$valor, d$fecha, catalogo_6[[z$ganador]]$f, ev$parametros, z$H, ev$om)
+  umbral <- if (id == "serie1") 330 else NULL        # meta contractual de la serie 1
+  guardar_fig(grafico_pronostico(d$fecha, d$valor, pf, ultimo_tramo[[id]], cfg$corto, cfg$unidad,
+                                 nombre_g, umbral),
+              paste0(id, "-6e-pronostico"))
+  out <- list(metodo = z$ganador, nombre = nombre_g, parametros = texto_parametros(ev$parametros),
+              pronostico = pf, errores_h = errores_por_horizonte(ev$om))
+  if (id == "serie1") {
+    # Insumo para la seccion 8: dias de la semana siguiente (h = 3..9) con pronostico sobre la meta
+    # y probabilidad heuristica de superarla, suponiendo errores normales con la desviacion de cada h.
+    sub <- pf[pf$h >= 3, ]
+    out$meta <- 330
+    out$sobre_meta <- tibble::tibble(h = sub$h, fecha = sub$fecha, pronostico = sub$pronostico,
+                                     sd_error = sub$sd_error,
+                                     prob_supera = 1 - stats::pnorm((330 - sub$pronostico) / sub$sd_error))
+    out$dias_esperados <- sum(out$sobre_meta$prob_supera)
+  }
+  out
+})
+for (id in names(res6e)) {
+  cat("\n", strrep("=", 70), "\n", id, ": 6(e) pronostico final con ", res6e[[id]]$nombre,
+      " (", res6e[[id]]$parametros, ")\n", sep = "")
+  print(as.data.frame(res6e[[id]]$pronostico), digits = 4)
+}
+cat("\nSerie 1, insumo para 8: probabilidad heuristica de superar 330 s en h = 3..9\n")
+print(as.data.frame(res6e$serie1$sobre_meta), digits = 3)
+cat("Dias esperados sobre la meta (suma de probabilidades):", round(res6e$serie1$dias_esperados, 2), "\n")
 # =============================================================================
 # CIERRE
 # =============================================================================
@@ -1132,7 +1280,9 @@ saveRDS(
        z_elegida = z_elegida,
        res5 = res5, resumen5 = resumen5,
        verif6 = verif6, asignacion_6a = asignacion_6a, tabla_6a = tabla_6a,
-       aplicados_6 = aplicados_6, res6b = res6b, resumen6b = resumen6b),
+       aplicados_6 = aplicados_6, res6b = res6b, resumen6b = resumen6b,
+       res6c = res6c, resumen6c = resumen6c, res6d = res6d, res6e = res6e,
+       transformacion_txt = transformacion_txt, m_lb = m_lb),
   file.path("figs", "resultados.rds")
 )
 

@@ -47,7 +47,8 @@ res <- readRDS("figs/resultados.rds")
 for (archivo in sort(list.files("R", pattern = "\\.R$", full.names = TRUE))) {
   source(archivo, encoding = "UTF-8")
 }
-faltan <- setdiff(c("res3a", "res3b", "verif6", "asignacion_6a", "tabla_6a", "res6b", "resumen6b"), names(res))
+faltan <- setdiff(c("res3a", "res3b", "verif6", "asignacion_6a", "tabla_6a", "res6b", "resumen6b",
+             "series_cfg", "res6c", "resumen6c", "res6d", "res6e"), names(res))
 if (length(faltan) > 0) {
   stop("figs/resultados.rds no tiene: ", paste(faltan, collapse = ", "),
        ". El analisis se corrio con una version vieja de analisis/correr-todo.R. ",
@@ -1236,9 +1237,271 @@ bloque_6b("serie3", "tend_lineal")
 
 :::
 
+## Origen móvil
+
+```{r}
+#| label: ayudas-6c
+#| include: false
+
+rol_corto <- c(referente = "referente", sostenido = "sostenido", contraste = "contraste")
+
+tabla_6c <- function(z, h1 = TRUE) {
+  t <- if (h1) z$tabla_h1 else z$tabla_hH
+  t |>
+    dplyr::transmute(`Método` = nombre,
+                     Rol = unname(rol_corto[rol]),
+                     `Constantes` = parametros,
+                     n = n, RMSE = RMSE, MAD = MAD, `MAPE (%)` = MAPE,
+                     `RMSE / RMSE del referente` = RMSE_rel)
+}
+
+bloque_6c <- function(id) {
+  z <- res$res6c[[id]]; H <- z$H
+  cfg <- res$series_cfg[[id]]
+  g <- z$tabla[z$tabla$metodo == z$ganador, ]
+  r <- z$tabla[z$tabla$metodo == z$referente, ]
+  gH <- z$tabla[z$tabla$metodo == z$ganador_H, ]
+
+  cat("Se evalúan ", nrow(z$tabla), " métodos con $n_0=", z$n0, "$ y $T=", z$T, "$, todos sobre los mismos orígenes: ",
+      g$n1, " errores a $h=1$ (orígenes $o=n_0,\\dots,T-1$) y ", g$nH, " a $h=", H,
+      "$ (orígenes $o=n_0,\\dots,T-", H, "$). En cada origen el método recibe solo $y_1,\\dots,y_o$. ",
+      "El referente es el **", r$nombre, "** (la razón de esa elección está en 6(a)); va como una fila más, ",
+      "calculada sobre los mismos orígenes, y ningún método que no lo supere se descarta de la tabla.\n\n", sep = "")
+
+  # Constantes elegidas, con su curva o mapa de MSE
+  con <- z$tabla[!is.na(z$tabla$mse_est), ]
+  if (nrow(con) > 0) {
+    cat("**Constantes elegidas en $y_1,\\dots,y_{n_0}$** por MSE de un paso con `optimizar()`:\n\n")
+    tabla_md(con |> dplyr::transmute(`Método` = nombre, `Constantes elegidas` = parametros,
+                                     `MSE de un paso (estimación)` = mse_est),
+             digits = 3, format.args = list(decimal.mark = ","))
+    for (m in names(z$evals)) {
+      if (!is.null(z$evals[[m]]$curva)) {
+        nm <- z$tabla$nombre[z$tabla$metodo == m]
+        fig_md(paste0(id, "-6c-mse-", m, ".png"),
+               paste0("MSE de un paso en el tramo de estimación para ", nm, "."))
+      }
+    }
+  }
+
+  cat("**Horizonte $h=1$** (ordenada de menor a mayor RMSE).\n\n")
+  tabla_md(tabla_6c(z, TRUE), digits = 3, format.args = list(decimal.mark = ","))
+  cat("**Horizonte $h=", H, "$** (ordenada de menor a mayor RMSE).\n\n", sep = "")
+  tabla_md(tabla_6c(z, FALSE), digits = 3, format.args = list(decimal.mark = ","))
+
+  red1 <- 100 * (1 - g$RMSE1 / r$RMSE1)
+  redH <- 100 * (1 - gH$RMSEH / r$RMSEH)
+  if (z$ganador == z$referente) {
+    cat("**Ganador a $h=1$.** El menor RMSE lo tiene el propio referente, **", g$nombre, "** ($",
+        fmt(g$RMSE1, 2), "$ ", cfg$unidad, "): ningún método del catálogo lo mejora a un paso. ", sep = "")
+  } else {
+    cat("**Ganador a $h=1$.** El menor RMSE lo tiene **", g$nombre, "** (", g$parametros, "), con $",
+        fmt(g$RMSE1, 2), "$ ", cfg$unidad, " frente a $", fmt(r$RMSE1, 2), "$ del referente (", r$nombre,
+        "): una reducción de ", fmt(red1, 1), " %. ", sep = "")
+  }
+  if (z$ganador_H == z$referente) {
+    cat("**A $h=", H, "$** el menor RMSE también es del referente ($", fmt(r$RMSEH, 2), "$).", sep = "")
+  } else {
+    cat("**A $h=", H, "$** el menor RMSE es de **", gH$nombre, "** (", gH$parametros, "), con $",
+        fmt(gH$RMSEH, 2), "$ frente a $", fmt(r$RMSEH, 2), "$ del referente: una reducción de ",
+        fmt(redH, 1), " %.", sep = "")
+  }
+  peor <- z$tabla_h1[z$tabla_h1$RMSE_rel > 1 & z$tabla_h1$metodo != z$referente, ]
+  if (nrow(peor) > 0) {
+    cat(" A $h=1$ no superan al referente: ", paste(peor$nombre, collapse = ", "), ".", sep = "")
+  }
+  cat("\n\n")
+}
+```
+
+```{r}
+#| label: tbl-resumen-6c
+#| tbl-cap: "Ganador a h = 1, mejor método a h = H y referente de cada serie (RMSE de origen móvil)."
+res$resumen6c |>
+  dplyr::transmute(Serie = serie, `Transformación (sección 4)` = transformacion,
+                   `Ganador h=1` = ganador, `Constantes` = parametros, Referente = referente,
+                   `RMSE h=1 (ganador)` = RMSE1_ganador, `RMSE h=1 (referente)` = RMSE1_referente,
+                   `Mejor h=H` = ganador_H, `RMSE h=H (mejor)` = RMSEH_ganador,
+                   `RMSE h=H (referente)` = RMSEH_referente) |>
+  knitr::kable(digits = 3, format.args = list(decimal.mark = ","))
+```
+
+::: {.panel-tabset}
+
+### Serie 1: espera en estación
+
+```{r}
+#| output: asis
+bloque_6c("serie1")
+```
+
+### Serie 2: pasajeros del aeropuerto
+
+```{r}
+#| output: asis
+bloque_6c("serie2")
+```
+
+### Serie 3: viajes de la plataforma
+
+```{r}
+#| output: asis
+bloque_6c("serie3")
+```
+
+:::
+
+## Validación del ganador
+
+Se validan los errores de origen móvil **a un paso** del ganador de cada serie, $e_{o+1}=y_{o+1}-\hat y_{o+1}$ para $o=n_0,\dots,T-1$, y no los residuos de un ajuste. Si el método aprovechó toda la estructura de la serie, esos errores deben tener media cero (prueba t), ser incorrelacionados (Ljung–Box referido a $\chi^2_m$, sin restar grados de libertad) y, para que la banda del pronóstico tenga sentido, ser aproximadamente normales (Jarque–Bera). El correlograma usa $m=\min\{\lfloor n/4\rfloor,24\}$ y su banda $\pm1{,}96/\sqrt{n}$ se calcula sobre el número $n$ de errores, no sobre $T$. Para Ljung–Box se usa el $m$ de la sección 5 limitado a $\lfloor n/4\rfloor$, porque con pocos errores no se pueden pedir más rezagos de los que sostienen. Durbin–Watson es solo diagnóstico, leído con $d\approx 2(1-r_1)$. Con tan pocos errores las pruebas tienen poca potencia: que no rechacen no demuestra que el método sea perfecto.
+
+```{r}
+#| label: ayudas-6d
+#| include: false
+
+bloque_6d <- function(id) {
+  v <- res$res6d[[id]]; val <- v$validacion
+  cat("Ganador a $h=1$: **", v$nombre, "**. $n=", v$n, "$ errores; $m=", v$m, "$ en el correlograma y $m=",
+      v$m_test, "$ en Ljung–Box; error medio $", fmt(v$media, 3), "$ y desviación estándar $", fmt(v$sd, 3), "$.\n\n", sep = "")
+  fig_md(paste0(id, "-6d-errores.png"),
+         "Errores de origen móvil a un paso en el tiempo (izquierda) y su correlograma con la banda calculada sobre el número de errores (derecha).")
+  cat("**Prueba t de media cero.**\n\n");  tabla_md(prueba_a_tabla(val$t))
+  cat("**Prueba de Ljung–Box.**\n\n");     tabla_md(prueba_a_tabla(val$ljung_box))
+  cat("**Prueba de Jarque–Bera.**\n\n");   tabla_md(prueba_a_tabla(val$jarque_bera))
+  dw <- val$durbin_watson
+  d <- dw[["d"]]
+  cat("**Durbin–Watson (diagnóstico).** $d=", fmt(d, 3), "$, con $r_1=", fmt(dw[["r1"]], 3), "$ y $2(1-r_1)=",
+      fmt(dw[["aprox_2_1_menos_r1"]], 3), "$. ",
+      if (d < 1.5) "Un $d$ por debajo de 2 indica autocorrelación positiva de primer orden en los errores. "
+      else if (d > 2.5) "Un $d$ por encima de 2 indica autocorrelación negativa de primer orden en los errores. "
+      else "Un $d$ cerca de 2 no sugiere autocorrelación de primer orden; no dice nada de los rezagos mayores. ",
+      "\n\n", sep = "")
+  cat("**Sensibilidad de Ljung–Box a $m$.**\n\n")
+  tabla_md(v$sensibilidad |>
+             dplyr::transmute(m = m, Q = Q, `g.l.` = gl, `Valor crítico` = critico,
+                              `Valor p` = format.pval(p, digits = 3)), digits = 3)
+  cat("**Estructura que queda.** Rezagos de la ACF fuera de la banda $\\pm", fmt(v$banda, 3), "$: ",
+      compactar(v$fuera), ". ", v$lectura_rezagos, "\n\n", sep = "")
+}
+```
+
+::: {.panel-tabset}
+
+### Serie 1: espera en estación
+
+```{r}
+#| output: asis
+bloque_6d("serie1")
+```
+
+### Serie 2: pasajeros del aeropuerto
+
+```{r}
+#| output: asis
+bloque_6d("serie2")
+```
+
+### Serie 3: viajes de la plataforma
+
+```{r}
+#| output: asis
+bloque_6d("serie3")
+```
+
+:::
+
+## Pronóstico final
+
+Con el ganador de cada serie reajustado sobre las $T$ observaciones, y con las constantes elegidas en $y_1,\dots,y_{n_0}$, se pronostican los $H$ pasos siguientes. **La banda es heurística**: pronóstico $\pm\,1{,}96$ veces la desviación estándar de los errores de origen móvil a cada horizonte. No es un intervalo de confianza: supone errores centrados y aproximadamente normales, y con pocos orígenes por horizonte la desviación es una estimación ruidosa, sobre todo en los horizontes largos.
+
+```{r}
+#| label: ayudas-6e
+#| include: false
+
+# fig_md() y tabla_md() ya estan definidas en la seccion 5 (ayudas-5); aqui no se redefinen.
+
+bloque_6e <- function(id) {
+  z <- res$res6e[[id]]
+
+  cat("Método: **", z$nombre, "** (", z$parametros, ").\n\n", sep = "")
+
+  tabla_md(
+    z$pronostico |>
+      dplyr::transmute(
+        h = h,
+        Fecha = format(fecha),
+        `Pronóstico` = pronostico,
+        `Desv. de los errores del horizonte` = sd_error,
+        `n errores` = n_errores,
+        `Banda inferior (heurística)` = inferior,
+        `Banda superior (heurística)` = superior
+      ),
+    digits = 2,
+    format.args = list(decimal.mark = ",")
+  )
+
+  fig_md(
+    paste0(id, "-6e-pronostico.png"),
+    "Último tramo de la serie, pronóstico final y banda heurística, que no es un intervalo de confianza."
+  )
+}
+```
+
+::: {.panel-tabset}
+
+### Serie 1: espera en estación
+
+```{r}
+#| output: asis
+bloque_6e("serie1")
+```
+
+```{r}
+#| output: asis
+z <- res$res6e$serie1
+cat("**Insumo para la sección 8.** La decisión del viernes cubre de lunes a domingo, $h=3,\\dots,9$. ",
+    "Con la misma heurística (errores normales con la desviación de cada horizonte), la probabilidad de ",
+    "superar los ", z$meta, " s cada día es:\n\n", sep = "")
+tabla_md(z$sobre_meta |>
+           dplyr::transmute(h = h, Fecha = format(fecha), `Pronóstico` = pronostico,
+                            `Desv. del error` = sd_error, `P(superar la meta)` = prob_supera),
+         digits = 3, format.args = list(decimal.mark = ","))
+cat("La suma de esas probabilidades, **", fmt(z$dias_esperados, 2),
+    " días**, es el número de días de la semana siguiente en que se espera superar la meta. ",
+    "Es una cifra heurística y se usa en 8 para comparar la multa esperada con el costo del refuerzo.\n\n", sep = "")
+```
+
+### Serie 2: pasajeros del aeropuerto
+
+```{r}
+#| output: asis
+bloque_6e("serie2")
+```
+
+### Serie 3: viajes de la plataforma
+
+```{r}
+#| output: asis
+bloque_6e("serie3")
+```
+
+:::
+
 # Conclusión técnica
 
-*Pendiente.*
+**Serie 1: espera en estación (tipo I, sin transformación).** La serie es de tipo I: nivel estable alrededor de 298,8 s, sin tendencia ni estacionalidad, con $r_1=0{,}48$. No necesita transformación, porque diferenciar sube la varianza de 323,6 a 334,7 s², como predice la identidad $\mathrm{Var}(\nabla Y_t)=2\gamma(0)-2\gamma(1)$ en una serie ya estacionaria. A $h=1$ gana Holt–Winters aditivo ($\alpha=0{,}9$, $\beta=0{,}1$, $\gamma=0{,}1$) con RMSE de 16,88 s frente a 17,00 s del ingenuo, una reducción de solo 0,7 %: en la práctica no se distingue del referente, y con $\alpha=0{,}9$ el método casi repite el último dato. El siguiente es la media simple, con 18,05 s. A $h=9$, el horizonte de la decisión del viernes, gana la media simple con 19,16 s frente a 27,59 s del ingenuo (30,6 % menos), mientras que Holt–Winters queda último con 36,79 s (1,33 veces el referente). Los $n=36$ errores a un paso del ganador no dejan estructura aprovechable: error medio de 0,15 s con desviación de 17,12 s, ningún rezago de la ACF fuera de la banda $\pm0{,}327$ (los mayores son $r_2=-0{,}30$ y $r_4=-0{,}27$), $d=1{,}74$ y Ljung–Box con $Q=10{,}84$ ($m=9$, $p=0{,}287$). Con tan pocos errores las pruebas tienen poca potencia, así que ese resultado no demuestra que el método sea perfecto.
+
+**Serie 2: pasajeros del aeropuerto (tipo IV, $(1-B)(1-B^4)$).** La serie tiene tendencia lineal creciente y estacionalidad aditiva de período $s=4$. La transformación $(1-B)(1-B^4)$ la vuelve plausiblemente estacionaria: la varianza baja de 305.557 a 4.183, queda $r_1=-0{,}057$ (sin señal de sobrediferenciación) y la media es 0,56 miles de pasajeros, a 0,09 errores estándar del 0. A $h=1$ gana Holt–Winters aditivo ($\alpha=0{,}7$, $\beta=0{,}1$, $\gamma=0{,}1$) con RMSE de 38,21 miles de pasajeros frente a 92,18 del ingenuo estacional, una reducción de 58,6 %. A $h=4$, el horizonte del plan anual, gana la tendencia con ficticias de suma cero con 41,30 frente a 90,35 (54,3 % menos), por delante de Holt–Winters aditivo (70,73). Los $n=24$ errores a un paso del ganador tienen error medio de 4,27 y desviación de 38,79 miles de pasajeros, ningún rezago fuera de la banda $\pm0{,}400$ y $Q=5{,}64$ ($m=6$, $p=0{,}465$). Queda una señal débil sin aprovechar: $r_1=0{,}34$, cerca de la banda, y $d=1{,}23$, lo que sugiere autocorrelación positiva de corto plazo en los errores, que con $n=24$ la prueba no detecta.
+
+**Serie 3: viajes de la plataforma (tipo III, $\log Y_t$ y $(1-B)$).** La serie tiene tendencia curva sin estacionalidad y una variabilidad que crece con el nivel. La transformación $\log Y_t$ seguida de $(1-B)$ la vuelve plausiblemente estacionaria: la varianza baja de 0,255 a 0,00269 y la de los cambios se mantiene estable entre mitades (0,00266 y 0,00274). Queda $r_1=-0{,}42$, una cautela de posible sobrediferenciación leve. Gana la tendencia exponencial, sin constantes que elegir, en los dos horizontes: a $h=1$ con RMSE de 18,31 miles de viajes frente a 23,03 del ingenuo (20,5 % menos) y a $h=6$ con 18,99 frente a 37,37 (49,2 % menos). Los $n=29$ errores a un paso tienen error medio de $-1{,}47$ y desviación de 18,57 miles de viajes, ningún rezago fuera de la banda $\pm0{,}364$ (el mayor es $r_3=0{,}27$), $d=1{,}48$ y $Q=4{,}95$ ($m=7$, $p=0{,}666$). Tampoco hay estructura detectable, con la misma limitación de potencia ($n=29$).
+
+**Comparación de las tres series.** El ganador cambia porque cada método supone una forma del patrón y solo gana donde esa forma coincide con el diagnóstico. En la serie 2 hay tendencia y estacionalidad que el referente ignora a medias (repite el trimestre del año anterior, sin la tendencia), y por eso Holt–Winters aditivo y la tendencia con ficticias le ganan por 54 % a 59 %; en la serie 3 la tendencia curva, de crecimiento constante en porcentaje (1,24 % mensual), la captura la exponencial, que reduce 49,2 % el error a $h=6$; y en la serie 1 no hay estructura que capturar, así que el margen sobre el ingenuo a $h=1$ es de 0,7 %. El mismo método gana en una y pierde en otra: Holt–Winters aditivo es el mejor a $h=1$ en las series 1 y 2, pero en la serie 1 a $h=9$ queda último (1,33 veces el referente), porque su pendiente y su índice estacional siguen ruido donde no hay tendencia ni estacionalidad. La tendencia lineal, que en la serie 2 queda en 1,21 veces el referente, en la serie 3 llega a 2,12 veces, porque la tendencia es curva. El horizonte también cambia al ganador: a $h=1$ ganan los métodos que se adaptan al último dato, y a $h=9$ en la serie 1 y a $h=4$ en la serie 2 ganan los que estiman la estructura global (la media simple y la tendencia con ficticias).
+
+| Serie | Ganador a $h=1$ | RMSE ($h=1$) | RMSE referente | Mejor a $h=H$ | RMSE ($h=H$) | RMSE referente |
+|---|---|---|---|---|---|---|
+| 1 (s) | Holt–Winters aditivo | 16,88 | 17,00 | Media simple | 19,16 | 27,59 |
+| 2 (miles de pasajeros) | Holt–Winters aditivo | 38,21 | 92,18 | Tendencia con ficticias | 41,30 | 90,35 |
+| 3 (miles de viajes) | Tendencia exponencial | 18,31 | 23,03 | Tendencia exponencial | 18,99 | 37,37 |
 
 # Argumentos para los interesados
 
@@ -1247,3 +1510,45 @@ bloque_6b("serie3", "tend_lineal")
 # README, reproducibilidad y uso de Git
 
 *Pendiente.*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
