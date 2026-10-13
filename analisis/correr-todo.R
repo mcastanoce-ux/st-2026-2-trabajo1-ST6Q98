@@ -1093,15 +1093,7 @@ for (z in res6b) {
 
 
 # ---- 6(c) Origen movil -------------------------------------------------------
-# Para cada serie y cada metodo aplicado en 6(a), incluido el contraste y el referente:
-#   1. las constantes se eligen con optimizar() SOLO en y[1..n0], sobre la rejilla del
-#      catalogo (la curva o el mapa de MSE se guarda en figs/);
-#   2. se evalua por origen movil con esas constantes fijas, con los mismos origenes para
-#      todos los metodos de la serie (h = 1: o = n0..T-1; h = H: o = n0..T-H).
-# El referente de cada serie es el ingenuo que asignacion_6a marca con rol "referente"
-# (la justificacion esta en la asignacion y en el informe). Es una fila mas de la tabla,
-# calculada sobre los mismos origenes. Un metodo que no lo supera no se descarta.
-# El GANADOR de cada serie es el de menor RMSE a h = 1; tambien se guarda el mejor a h = H.
+
 
 hacer_6c <- function(id, cfg, datos, aplic, part) {
   y <- datos$valor
@@ -1289,3 +1281,4 @@ saveRDS(
 writeLines(capture.output(sessionInfo()), "sesion-info.txt")
 tiempo_ejecucion <- difftime(Sys.time(), inicio_ejecucion, units = "secs")
 message("correr-todo.R termino en ", round(as.numeric(tiempo_ejecucion), 1), " segundos.")
+

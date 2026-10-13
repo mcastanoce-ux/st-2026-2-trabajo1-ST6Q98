@@ -1482,7 +1482,7 @@ bloque_6e("serie2")
 
 ```{r}
 #| output: asis
-bloque_6e("serie3")
+bloque_6e("serie3") 
 ```
 
 :::
