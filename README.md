@@ -8,9 +8,9 @@ Series de tiempo univariadas (3009297), Universidad Nacional de Colombia, sede M
 
 | Integrante | Usuario de GitHub | Puntos del trabajo | Archivos |
 |---|---|---|---|
-| Mariana Castaño Celis | mcastanoce-ux | 3 (descripción y patrón), 6 (pronóstico y evaluación) y 7 (conclusión técnica) | `R/00-lectura.R` y `R/05-evaluacion.R`. Participó en `R/04-metodos.R`, `correr-todo.R` y el informe. |
-| Sarah Catalina Criollo García | Sarah-Cr1ollo | 2 (las tres series y la pregunta de pronóstico), 3 (descripción y patrón), 6 (pronóstico y evaluación) y 9 (README, reproducibilidad y uso de Git) | `README.md`, `exposicion/ST6Q98.pdf` e `informe/nota-interesados.pdf`. Participó en `R/04-metodos.R`, `correr-todo.R` y el informe. |
-| Sofia Cadavid Rueda | Sofia-Cadavid-Rueda | 2 (las tres series y la pregunta de pronóstico), 4 (operador de rezago), 5 (dependencia y estacionariedad) y 8 (argumentos para los interesados) | `R/01-graficos.R`, `R/02-operadores.R` y `R/03-dependencia.R`. Participó en `R/04-metodos.R`, `correr-todo.R` y el informe. |
+| Mariana Castaño Celis | mcastanoce-ux | 3, 6(c), 6(d), 6(e) y 7 | `R/00-lectura.R`, `R/01-graficos.R`, `R/02-operadores.R`, `R/03-dependencia.R`, `R/04-metodos.R` y `R/05-evaluacion.R`. Participó en `correr-todo.R` y el informe. |
+| Sarah Catalina Criollo García | Sarah-Cr1ollo | 6(a), 6(b), 8(c) y exposición | `README.md`, `exposicion/ST6Q98.pdf` e `informe/nota-interesados.pdf`. Participó en `R/04-metodos.R`, `correr-todo.R` y el informe. |
+| Sofia Cadavid Rueda | Sofia-Cadavid-Rueda | 2, 4, 5, 8(a) y 8(b) | Participó en  `R/01-graficos.R`, `R/02-operadores.R` y `R/03-dependencia.R`, `R/04-metodos.R`, `correr-todo.R` y el informe. |
 ## Qué contiene el repositorio
 
 | Archivo | Contenido | Autor |
@@ -22,14 +22,13 @@ Series de tiempo univariadas (3009297), Universidad Nacional de Colombia, sede M
 | `datos/ST6Q98-serie-2.csv` | Serie 2: pasajeros trimestrales del aeropuerto regional (miles, trimestral, T = 120), tal como se entregó | Profesor |
 | `datos/ST6Q98-serie-3.csv` | Serie 3: viajes mensuales en la plataforma de movilidad (miles, mensual, T = 144), tal como se entregó | Profesor |
 | `R/00-lectura.R` | `leer_serie()` | Mariana Castaño Celis |
-| `R/01-graficos.R` | `graficar_serie()`, `grafico_estacional()`, `grafico_rezagos()`, `correlograma()` | Sofia Cadavid Rueda |
-| `R/02-operadores.R` | `diferenciar()`, `polinomio_rezago()` | Sofia Cadavid Rueda |
-| `R/03-dependencia.R` | `acf_muestral()`, `pacf_dl()`, `ljung_box()`, `varianza_largo_plazo()` | Sofia Cadavid Rueda |
+| `R/01-graficos.R` | `graficar_serie()`, `grafico_estacional()`, `grafico_rezagos()`, `correlograma()` | Mariana Castaño Celis y Sofia Cadavid Rueda |
+| `R/02-operadores.R` | `diferenciar()`, `polinomio_rezago()` | Mariana Castaño Celis y Sofia Cadavid Rueda |
+| `R/03-dependencia.R` | `acf_muestral()`, `pacf_dl()`, `ljung_box()`, `varianza_largo_plazo()` | Mariana Castaño Celis y Sofia Cadavid Rueda |
 | `R/04-metodos.R` | Los métodos del catálogo, uno por función (`ajustar_media()`, `ajustar_ingenuo()`, `ajustar_ingenuo_estacional()`, `ajustar_mm()`, `ajustar_ses()`, `ajustar_dmm()`, `ajustar_tendencia()`, `ajustar_tendencia_estacional()`, `ajustar_holt()`, `ajustar_hw()`, `ajustar_hw_mult()`) | Mariana Castaño Celis, Sarah Catalina Criollo García y Sofia Cadavid Rueda |
 | `R/05-evaluacion.R` | `optimizar()`, `origen_movil()`, `medidas()`, `validar_errores()` | Mariana Castaño Celis |
 | `analisis/correr-todo.R` | Carga `R/`, verifica los datos y las funciones propias contra R, y corre las tres series en orden (secciones 2 a 6) | Mariana Castaño Celis, Sarah Catalina Criollo García y Sofia Cadavid Rueda |
 | `informe/informe.qmd` | Informe en Quarto | Mariana Castaño Celis, Sarah Catalina Criollo García y Sofia Cadavid Rueda |
-| `informe/informe.html` | Informe renderizado | Mariana Castaño Celis, Sarah Catalina Criollo García y Sofia Cadavid Rueda |
 | `informe/nota-interesados.pdf` | Nota de una página para los interesados (sección 8) | Sarah Catalina Criollo García |
 | `exposicion/ST6Q98.pdf` | Diapositivas de la exposición (sección 10) | Sarah Catalina Criollo García |
 | `figs/` | Figuras generadas por `correr-todo.R`, con prefijo `serie1-`, `serie2-` y `serie3-`, y `resultados.rds` | Generado por código |
