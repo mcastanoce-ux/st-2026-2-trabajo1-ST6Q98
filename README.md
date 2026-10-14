@@ -40,9 +40,9 @@ Series de tiempo univariadas (3009297), Universidad Nacional de Colombia, sede M
 
 | Archivo o función | De quién es | Qué se le cambió |
 |---|---|---|
-| [NO APLICA] | [NO APLICA] | [NO APLICA] |
+| No aplica | No aplica | No aplica |
 
-Se crearon las funciones desde cero.
+No se reutilizaron funciones de la Tarea 1. Todas las funciones de `R/` se escribieron para este trabajo.
 
 ## Cómo se corre
 
@@ -63,7 +63,7 @@ quarto render informe/informe.qmd
 
 `correr-todo.R` usa rutas relativas, no pide intervención y guarda las figuras en `figs/`.
 
-Tiempo de ejecución observado de `correr-todo.R`: [PENDIENTE] (medido con `system.time(source("analisis/correr-todo.R"))`). Tiempo del render: [PENDIENTE].
+Tiempo de ejecución observado de `correr-todo.R`: 37,40 segundos (medido con `system.time(source("analisis/correr-todo.R"))`, valor `elapsed`).
 
 ## Resumen de resultados
 
@@ -79,7 +79,7 @@ RMSE de origen móvil, con los mismos orígenes para todos los métodos de cada 
 
 El equipo usó Claude (Anthropic, vía claude.ai) en octubre de 2026 como apoyo para orientarse en la construcción de las estructuras del trabajo: cómo organizar los bloques de `correr-todo.R`, las funciones de `R/`, las secciones del informe y este README. La IA no tuvo acceso de escritura al repositorio. Se le compartieron los archivos, los datos, capturas de pantalla y las diapositivas de clase, y para el README leyó el repositorio público desde la web.
 
-**Qué se pidió.** Orientación sobre la estructura de cada parte del trabajo. También se le pidió revisar las funciones propias (`diferenciar()`, `polinomio_rezago()` y los métodos de `R/04-metodos.R`), explicar cómo leer los gráficos de rezagos y los correlogramas, y resolver errores de renderizado de Quarto.
+**Qué se pidió.** Orientación sobre la estructura de cada parte del trabajo. También se le pidió revisar las funciones propias (`diferenciar()`, `polinomio_rezago()` y los métodos de `R/04-metodos.R`), explicar cómo leer los gráficos de rezagos y los correlogramas, y resolver errores de renderizado de Quarto. Además, se le pidió un esqueleto del README con las seis secciones de 9(a).
 
 **Qué se recibió.** Propuestas de estructura y de orden de los bloques, observaciones sobre el código y correcciones para seguir las convenciones de inicialización de las notas de clase (Holt, Holt–Winters y tendencia exponencial). Se recibieron también funciones auxiliares, como `polinomio_diferencias()` y `grafico_raices()`, el código de las regresiones de 6(b), borradores de texto para el informe y el esqueleto del README.
 

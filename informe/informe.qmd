@@ -1618,7 +1618,17 @@ La nota de una página, sin fórmulas ni términos del curso y con un solo gráf
 
 # README, reproducibilidad y uso de Git
 
-*Pendiente.*
+**README.** El archivo `README.md`, en la raíz del repositorio, tiene en este orden: el enlace del repositorio y el código ST6Q98; las integrantes y lo que hizo cada una; la tabla de archivos con su contenido y su autor; los comandos exactos para correr el análisis y el tiempo de ejecución observado; la tabla de resultados por serie, con la transformación elegida, el ganador, sus parámetros y su RMSE frente al referente en $h=1$ y en $H$; y la declaración de uso de IA.
+
+**Reproducibilidad.** Todo el análisis se corre desde la raíz del repositorio con un solo comando:
+
+    source("analisis/correr-todo.R")
+
+El script usa rutas relativas y no pide intervención. Lee las tres series de `datos/` y verifica que coincidan con las fechas y longitudes declaradas en el enunciado. También comprueba las funciones propias contra las de R (`diff()`, `acf()`, `pacf()`, `Box.test()`, `lm()`). Las figuras quedan en `figs/` con el prefijo `serie1-`, `serie2-` o `serie3-`, y los resultados en `figs/resultados.rds`, que es el archivo que lee este informe. La entrega se cerró con R 4.5.2 en Windows 10. La salida completa de `sessionInfo()` está en `sesion-info.txt`. El informe se renderiza con:
+
+    quarto render informe/informe.qmd
+
+**Uso de Git.** El trabajo se llevó en GitHub con commits de las tres integrantes: Mariana Castaño Celis (`mcastanoce-ux`), Sarah Catalina Criollo García (`Sarah-Cr1ollo`) y Sofia Cadavid Rueda (`Sofia-Cadavid-Rueda`). Cada commit corresponde a un avance concreto: secciones 2 a 5, puntos 6(a) y 6(b), cierre de las secciones 6 y 7, README, nota y exposición. El `.gitignore` excluye `.Rhistory`, `.RData` y `.Rproj.user`. El commit de entrega lleva la etiqueta `v1.0`.
 
 
 
