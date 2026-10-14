@@ -1609,26 +1609,8 @@ Un error por defecto cuesta unas 11 veces lo que cuesta un error por exceso (12 
 
 **Respuesta.** Es el riesgo real de este pronóstico: la capacidad se contrata por semestre y no se puede devolver a mitad de camino. Pero suponer que el crecimiento ya se detuvo ha sido el error más caro hasta ahora: en la evaluación a seis meses, repetir el último mes se equivocó 37,4 miles de viajes frente a 19,0 del método con crecimiento. Para limitar el riesgo, se contrata la capacidad del pronóstico central (487,0 miles en junio) y no la del margen superior, y se escalona la vinculación de conductores mes a mes: si junio termina por debajo de 449,0 miles, unos 8 % bajo el pronóstico, el crecimiento se frenó.
 
-:::
-
-## La nota para los interesados {#sec-nota}
-
-La nota de una página, sin fórmulas ni términos del curso y con un solo gráfico por serie, está en `informe/nota-interesados.pdf`. Responde la pregunta de cada interesado (cuántos días se espera superar la meta en la serie 1, cuántos pasajeros por trimestre en la serie 2 y cuántos viajes por mes en la serie 3), traduce el error típico a una consecuencia para la decisión y dice lo que el pronóstico no puede garantizar.
 
 
-# README, reproducibilidad y uso de Git
-
-**README.** El archivo `README.md`, en la raíz del repositorio, tiene en este orden: el enlace del repositorio y el código ST6Q98; las integrantes y lo que hizo cada una; la tabla de archivos con su contenido y su autor; los comandos exactos para correr el análisis y el tiempo de ejecución observado; la tabla de resultados por serie, con la transformación elegida, el ganador, sus parámetros y su RMSE frente al referente en $h=1$ y en $H$; y la declaración de uso de IA.
-
-**Reproducibilidad.** Todo el análisis se corre desde la raíz del repositorio con un solo comando:
-
-    source("analisis/correr-todo.R")
-
-El script usa rutas relativas y no pide intervención. Lee las tres series de `datos/` y verifica que coincidan con las fechas y longitudes declaradas en el enunciado. También comprueba las funciones propias contra las de R (`diff()`, `acf()`, `pacf()`, `Box.test()`, `lm()`). Las figuras quedan en `figs/` con el prefijo `serie1-`, `serie2-` o `serie3-`, y los resultados en `figs/resultados.rds`, que es el archivo que lee este informe. La entrega se cerró con R 4.5.2 en Windows 10. La salida completa de `sessionInfo()` está en `sesion-info.txt`. El informe se renderiza con:
-
-    quarto render informe/informe.qmd
-
-**Uso de Git.** El trabajo se llevó en GitHub con commits de las tres integrantes: Mariana Castaño Celis (`mcastanoce-ux`), Sarah Catalina Criollo García (`Sarah-Cr1ollo`) y Sofia Cadavid Rueda (`Sofia-Cadavid-Rueda`). Cada commit corresponde a un avance concreto: secciones 2 a 5, puntos 6(a) y 6(b), cierre de las secciones 6 y 7, README, nota y exposición. El `.gitignore` excluye `.Rhistory`, `.RData` y `.Rproj.user`. El commit de entrega lleva la etiqueta `v1.0`.
 
 
 

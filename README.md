@@ -6,18 +6,17 @@ Series de tiempo univariadas (3009297), Universidad Nacional de Colombia, sede M
 
 ## Integrantes
 
-| Integrante | Usuario de GitHub | Qué hizo |
-|---|---|---|
-| Mariana Castaño Celis | mcastanoce-ux | Escribió `R/00-lectura.R` y `R/05-evaluacion.R`. Terminó la sección 6 (pronóstico y evaluación) y escribió la sección 7 (conclusión técnica). Participó en `R/04-metodos.R`, `correr-todo.R` y el informe. |
-| Sarah Catalina Criollo García | Sarah-Cr1ollo | Desarrolló los puntos 6(a) (métodos y asignación) y 6(b) (regresiones). Hizo el README y la exposición. Participó en `R/04-metodos.R`, `correr-todo.R` y el informe. |
-| Sofia Cadavid Rueda | Sofia-Cadavid-Rueda | Escribió `R/01-graficos.R`, `R/02-operadores.R` y `R/03-dependencia.R`. Desarrolló las secciones 2 a 5 (series, descripción, operador de rezago y dependencia) e hizo la nota para los interesados (sección 8). Participó en `R/04-metodos.R`, `correr-todo.R` y el informe. |
-
+| Integrante | Usuario de GitHub | Puntos del trabajo | Archivos |
+|---|---|---|---|
+| Mariana Castaño Celis | mcastanoce-ux | 3 (descripción y patrón), 6 (pronóstico y evaluación) y 7 (conclusión técnica) | `R/00-lectura.R` y `R/05-evaluacion.R`. Participó en `R/04-metodos.R`, `correr-todo.R` y el informe. |
+| Sarah Catalina Criollo García | Sarah-Cr1ollo | 2 (las tres series y la pregunta de pronóstico), 3 (descripción y patrón), 6 (pronóstico y evaluación) y 9 (README, reproducibilidad y uso de Git) | `README.md`, `exposicion/ST6Q98.pdf` e `informe/nota-interesados.pdf`. Participó en `R/04-metodos.R`, `correr-todo.R` y el informe. |
+| Sofia Cadavid Rueda | Sofia-Cadavid-Rueda | 2 (las tres series y la pregunta de pronóstico), 4 (operador de rezago), 5 (dependencia y estacionariedad) y 8 (argumentos para los interesados) | `R/01-graficos.R`, `R/02-operadores.R` y `R/03-dependencia.R`. Participó en `R/04-metodos.R`, `correr-todo.R` y el informe. |
 ## Qué contiene el repositorio
 
 | Archivo | Contenido | Autor |
 |---|---|---|
 | `README.md` | Este documento | Sarah Catalina Criollo García |
-| `.gitignore` | Excluye `.Rhistory`, `.RData` y `.Rproj.user` | Mariana Castaño Celis, Sarah Catalina Criollo García y Sofia Cadavid Rueda |
+| `.gitignore` | Excluye `.Rhistory`, `.RData` y `.Rproj.user` | Mariana Castaño Celis |
 | `st-2026-2-trabajo1-ST6Q98.Rproj` | Proyecto de RStudio | Mariana Castaño Celis, Sarah Catalina Criollo García y Sofia Cadavid Rueda |
 | `datos/ST6Q98-serie-1.csv` | Serie 1: tiempo medio diario de espera en la estación Los Almendros (segundos, diaria, T = 180), tal como se entregó | Profesor |
 | `datos/ST6Q98-serie-2.csv` | Serie 2: pasajeros trimestrales del aeropuerto regional (miles, trimestral, T = 120), tal como se entregó | Profesor |
@@ -31,18 +30,11 @@ Series de tiempo univariadas (3009297), Universidad Nacional de Colombia, sede M
 | `analisis/correr-todo.R` | Carga `R/`, verifica los datos y las funciones propias contra R, y corre las tres series en orden (secciones 2 a 6) | Mariana Castaño Celis, Sarah Catalina Criollo García y Sofia Cadavid Rueda |
 | `informe/informe.qmd` | Informe en Quarto | Mariana Castaño Celis, Sarah Catalina Criollo García y Sofia Cadavid Rueda |
 | `informe/informe.html` | Informe renderizado | Mariana Castaño Celis, Sarah Catalina Criollo García y Sofia Cadavid Rueda |
-| `informe/nota-interesados.pdf` | Nota de una página para los interesados (sección 8) | Sofia Cadavid Rueda |
+| `informe/nota-interesados.pdf` | Nota de una página para los interesados (sección 8) | Sarah Catalina Criollo García |
 | `exposicion/ST6Q98.pdf` | Diapositivas de la exposición (sección 10) | Sarah Catalina Criollo García |
 | `figs/` | Figuras generadas por `correr-todo.R`, con prefijo `serie1-`, `serie2-` y `serie3-`, y `resultados.rds` | Generado por código |
 | `sesion-info.txt` | Salida de `sessionInfo()` de la máquina en la que se cerró la entrega | Generado por código |
 
-### Funciones reutilizadas de la Tarea 1
-
-| Archivo o función | De quién es | Qué se le cambió |
-|---|---|---|
-| No aplica | No aplica | No aplica |
-
-No se reutilizaron funciones de la Tarea 1. Todas las funciones de `R/` se escribieron para este trabajo.
 
 ## Cómo se corre
 
@@ -77,17 +69,10 @@ RMSE de origen móvil, con los mismos orígenes para todos los métodos de cada 
 
 ## Declaración de uso de IA
 
-El equipo usó Claude (Anthropic, vía claude.ai) en octubre de 2026 como apoyo para orientarse en la construcción de las estructuras del trabajo: cómo organizar los bloques de `correr-todo.R`, las funciones de `R/`, las secciones del informe y este README. La IA no tuvo acceso de escritura al repositorio. Se le compartieron los archivos, los datos, capturas de pantalla y las diapositivas de clase, y para el README leyó el repositorio público desde la web.
+Declaración de uso de IA
 
-**Qué se pidió.** Orientación sobre la estructura de cada parte del trabajo. También se le pidió revisar las funciones propias (`diferenciar()`, `polinomio_rezago()` y los métodos de `R/04-metodos.R`), explicar cómo leer los gráficos de rezagos y los correlogramas, y resolver errores de renderizado de Quarto. Además, se le pidió un esqueleto del README con las seis secciones de 9(a).
+**Qué se pidió**. Se utilizó Claude (Anthropic, vía claude.ai) como apoyo para organizar el código, estructurar el informe y elaborar una estructura del README. También se consultó sobre funciones de R, interpretación de gráficos y solución de errores de renderizado.
 
-**Qué se recibió.** Propuestas de estructura y de orden de los bloques, observaciones sobre el código y correcciones para seguir las convenciones de inicialización de las notas de clase (Holt, Holt–Winters y tendencia exponencial). Se recibieron también funciones auxiliares, como `polinomio_diferencias()` y `grafico_raices()`, el código de las regresiones de 6(b), borradores de texto para el informe y el esqueleto del README.
+**Qué se recibió**. Se recibieron sugerencias de organización, observaciones sobre el código, funciones auxiliares y propuestas de redacción para el informe y el README.
 
-**Qué se verificó por cuenta propia.** Todo el código y el texto recibidos se copiaron, se corrieron y se revisaron a mano:
-
-- `correr-todo.R` corre completo y pasa las verificaciones de las funciones propias contra R (`diff()`, `acf()`, `pacf()`, `Box.test()`, `lm()`).
-- Las cifras de los borradores se contrastaron con la salida en consola.
-- El informe se renderizó y se revisó que no quedaran fórmulas sin mostrar.
-- Las cifras del resumen del README se cotejaron con el informe.
-
-Las decisiones sobre las series las tomó el equipo con base en sus propios resultados: transformaciones, estacionalidad, elección de $m$, clasificación del patrón y asignación de métodos. Los autores y las tareas de cada integrante que aparecen en este README también los aportó el equipo.
+**Qué se verificó por cuenta propia.** El equipo ejecutó y revisó el código, contrastó los resultados con las salidas obtenidas y comprobó el renderizado del informe. Las decisiones sobre las series, los métodos de pronóstico y la interpretación de los resultados fueron tomadas por el equipo a partir de sus propios análisis.
